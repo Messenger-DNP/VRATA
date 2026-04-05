@@ -5,7 +5,7 @@ backend/.mvn/wrapper/maven-wrapper.jar
 !**/src/test/**/target/
 
 ### .env ###
- .env
+.env
 
 ### STS ###
 .apt_generated
