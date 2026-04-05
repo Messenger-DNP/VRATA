@@ -1,13 +1,18 @@
+
 # Роли
+
 ---
+
 - UI - Арсен
 - Dev/DB - Тимур
 - Консьюмер - Рия
-- Продюсер - Ролан/Аделя
-- Логика - Аделя/Ролан
+  - Продюсер - Аделя
+- Логика - Ролан
 
 # Описание
+
 ---
+
 **Chat Application with Kafka**
 
 Build a distributed chat system using Kafka for message handling. Clients can join rooms, send messages, and receive real-time updates.

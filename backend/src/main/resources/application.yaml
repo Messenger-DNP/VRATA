@@ -1,3 +1,10 @@
 spring:
   application:
-    name: demo
+    name: chat-backend
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/chatdb}
