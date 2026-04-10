@@ -1,0 +1,169 @@
+openapi: 3.0.3
+info:
+  title: VRATA Backend API
+  version: 1.0.0
+  description: |
+    Base API for user authorization and integration contracts.
+servers:
+  - url: http://localhost:8080
+    description: Local backend server
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register user by username and password
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created and authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user by username and password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: rolan
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          example: StrongPassword123
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: rolan
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          example: StrongPassword123
+
+    AuthResponse:
+      type: object
+      required: [userId, username, tokenType, accessToken, expiresAt]
+      properties:
+        userId:
+          type: integer
+          format: int64
+          example: 42
+        username:
+          type: string
+          example: rolan
+        tokenType:
+          type: string
+          example: Bearer
+        accessToken:
+          type: string
+          example: 7c6be87d-f326-4f57-8c35-5982c20f2f17
+        expiresAt:
+          type: string
+          format: date-time
+          example: 2026-04-10T20:00:00Z
+
+    ErrorResponse:
+      type: object
+      required: [code, message, timestamp]
+      properties:
+        code:
+          type: string
+          example: INVALID_CREDENTIALS
+        message:
+          type: string
+          example: Invalid username or password
+        timestamp:
+          type: string
+          format: date-time
+          example: 2026-04-10T08:14:00Z
+
+    AuthEvent:
+      type: object
+      description: Contract payload for Kafka producer/consumer teams.
+      required: [eventType, userId, username, occurredAt]
+      properties:
+        eventType:
+          type: string
+          enum: [USER_REGISTERED, USER_LOGGED_IN]
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+
+x-kafka-integration:
+  authEvents:
+    topic: auth.events.v1
+    producer:
+      owner: backend-auth-service
+      responsibility: publish USER_REGISTERED and USER_LOGGED_IN events
+    consumer:
+      owner: chat-consumer-service
+      responsibility: subscribe and react to AuthEvent payload
+    payloadSchema: '#/components/schemas/AuthEvent'
