@@ -17,10 +17,13 @@ migrate_working_dir/
 *.ipr
 *.iws
 .idea/
+
+CLAUDE.md
 AGENTS.md
 .codex/
 docs/
 skills/
+
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
