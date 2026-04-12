@@ -18,9 +18,17 @@ public class KafkaMessageConsumer {
      * topicPattern means:
      * listen to every Kafka topic whose name matches this regex.
      */
-    @KafkaListener(topicPattern = "chat-room-.*",)
+    @KafkaListener(
+            topicPattern = "${app.kafka.chat-topic-pattern}",
+            groupId = "${spring.kafka.consumer.group-id}"
+    )
     public void consume(KafkaMessage message) {
         try {
+            if (!isValid(message)) {
+                log.warn("Invalid Kafka message received: {}", message);
+                return;
+            }
+
             log.info(
                     "Kafka message received: id={}, roomId={}, userId={}, username={}, content={}",
                     message.id(),
@@ -29,10 +37,9 @@ public class KafkaMessageConsumer {
                     message.username(),
                     message.content()
             );
+            prepareMessageDelivery(message);
 
-            /*
-             *  Implement message delivery here
-             */
+
 
             log.info(
                     "Message is prepared for further delivery to users in room {}",
@@ -46,5 +53,27 @@ public class KafkaMessageConsumer {
             );
         }
 
+    }
+
+    private boolean isValid(KafkaMessage message) {
+        return message != null
+                && message.id() != null
+                && message.roomId() != null
+                && message.userId() != null
+                && message.username() != null
+                && !message.username().isBlank()
+                && message.content() != null
+                && !message.content().isBlank();
+    }
+
+    private void prepareMessageDelivery(KafkaMessage message) {
+        log.info(
+                "Preparing message delivery: messageId={}, roomId={}, username={}",
+                message.id(),
+                message.roomId(),
+                message.username()
+        );
+
+        // TODO: deliver message to active users of this room
     }
 }
