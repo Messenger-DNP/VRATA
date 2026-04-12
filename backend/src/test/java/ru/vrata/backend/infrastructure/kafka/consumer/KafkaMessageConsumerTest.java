@@ -3,8 +3,8 @@ package ru.vrata.backend.infrastructure.kafka.consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 
 class KafkaMessageConsumerTest {
 
