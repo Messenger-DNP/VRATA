@@ -1,0 +1,54 @@
+package ru.vrata.backend.domain.service;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import ru.vrata.backend.domain.exception.InvalidCredentialsException;
+import ru.vrata.backend.domain.exception.UserAlreadyExistsException;
+import ru.vrata.backend.domain.repository.inmemory.InMemoryUserRepository;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class UserServiceTest {
+    private UserService userService;
+
+    @BeforeEach
+    void setUp() {
+        userService = new UserService(new InMemoryUserRepository());
+    }
+
+    @Test
+    void registerShouldCreateAuthSession() {
+        var authSession = userService.register("rolan", "StrongPassword123");
+
+        assertEquals(1L, authSession.userId());
+        assertEquals("rolan", authSession.username());
+        assertNotNull(authSession.accessToken());
+        assertNotNull(authSession.expiresAt());
+    }
+
+    @Test
+    void registerShouldFailWhenUserAlreadyExists() {
+        userService.register("rolan", "StrongPassword123");
+
+        assertThrows(UserAlreadyExistsException.class, () -> userService.register("rolan", "AnotherStrongPassword"));
+    }
+
+    @Test
+    void loginShouldReturnAuthSessionForValidCredentials() {
+        userService.register("rolan", "StrongPassword123");
+
+        var authSession = userService.login("rolan", "StrongPassword123");
+
+        assertEquals("rolan", authSession.username());
+        assertNotNull(authSession.accessToken());
+    }
+
+    @Test
+    void loginShouldFailForInvalidPassword() {
+        userService.register("rolan", "StrongPassword123");
+
+        assertThrows(InvalidCredentialsException.class, () -> userService.login("rolan", "wrong-password"));
+    }
+}

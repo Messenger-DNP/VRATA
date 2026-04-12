@@ -1,13 +1,84 @@
 package ru.vrata.backend.domain.service;
 
 import org.springframework.stereotype.Service;
+import ru.vrata.backend.domain.exception.InvalidCredentialsException;
+import ru.vrata.backend.domain.exception.UserAlreadyExistsException;
+import ru.vrata.backend.domain.model.AuthSession;
+import ru.vrata.backend.domain.model.User;
 import ru.vrata.backend.domain.repository.UserRepository;
-import lombok.AllArgsConstructor;
 
-@AllArgsConstructor
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.HexFormat;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
+
 @Service
 public class UserService {
-    private final UserRepository userRepository;
+    private static final Duration AUTH_TOKEN_TTL = Duration.ofHours(12);
 
-    // TODO (logic): user registration, user ID, login logic
+    private final UserRepository userRepository;
+    private final AtomicLong userIdGenerator = new AtomicLong(1L);
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    public AuthSession register(String username, String rawPassword) {
+        var normalizedUsername = normalizeUsername(username);
+        validateUserIsNotTaken(normalizedUsername);
+
+        var user = new User(
+                userIdGenerator.getAndIncrement(),
+                normalizedUsername,
+                hashPassword(rawPassword)
+        );
+        userRepository.save(user);
+
+        return createAuthSession(user);
+    }
+
+    public AuthSession login(String username, String rawPassword) {
+        var normalizedUsername = normalizeUsername(username);
+        var user = userRepository.findByUsername(normalizedUsername)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        if (!user.password().equals(hashPassword(rawPassword))) {
+            throw new InvalidCredentialsException();
+        }
+
+        return createAuthSession(user);
+    }
+
+    private void validateUserIsNotTaken(String username) {
+        if (userRepository.findByUsername(username).isPresent()) {
+            throw new UserAlreadyExistsException(username);
+        }
+    }
+
+    private AuthSession createAuthSession(User user) {
+        return new AuthSession(
+                user.id(),
+                user.username(),
+                UUID.randomUUID().toString(),
+                Instant.now().plus(AUTH_TOKEN_TTL)
+        );
+    }
+
+    private String normalizeUsername(String username) {
+        return username.trim();
+    }
+
+    private String hashPassword(String rawPassword) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 algorithm is unavailable", exception);
+        }
+    }
 }
