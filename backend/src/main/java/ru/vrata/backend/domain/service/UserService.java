@@ -27,7 +27,7 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public AuthSession register(String username, String rawPassword) {
+    public synchronized AuthSession register(String username, String rawPassword) {
         var normalizedUsername = normalizeUsername(username);
         validateUserIsNotTaken(normalizedUsername);
 
@@ -46,7 +46,7 @@ public class UserService {
         var user = userRepository.findByUsername(normalizedUsername)
                 .orElseThrow(InvalidCredentialsException::new);
 
-        if (!user.password().equals(hashPassword(rawPassword))) {
+        if (!user.matchesPasswordHash(hashPassword(rawPassword))) {
             throw new InvalidCredentialsException();
         }
 
@@ -69,10 +69,17 @@ public class UserService {
     }
 
     private String normalizeUsername(String username) {
-        return username.trim();
+        try {
+            return User.normalizeUsername(username);
+        } catch (IllegalArgumentException exception) {
+            throw new InvalidCredentialsException();
+        }
     }
 
     private String hashPassword(String rawPassword) {
+        if (rawPassword == null || rawPassword.isBlank()) {
+            throw new InvalidCredentialsException();
+        }
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
