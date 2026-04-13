@@ -5,9 +5,9 @@ import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
 @Component
 public class KafkaProducer {
-    // TODO (producer): send messages to topics, add logs
+    // TODO: send to topic + logs
 
     public void produce(KafkaMessage message) {
-        // TODO (producer): send message
+        // TODO: send message
     }
 }

@@ -11,5 +11,5 @@ public class ChatRoomService {
         this.chatRoomRepository = chatRoomRepository;
     }
 
-    // TODO (logic): create room, generate room ID, invite code, join room by invite code
+    // TODO: room create/join
 }

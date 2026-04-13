@@ -10,5 +10,5 @@ public interface ChatRoomRepository {
     Optional<ChatRoom> findByInviteCode(String inviteCode);
 
     ChatRoom save(ChatRoom chatRoom);
-    // TODO (logic): add methods for creating and joining room
+    // TODO: add create/join methods
 }
