@@ -34,6 +34,11 @@ public class GlobalExceptionHandler {
         return buildErrorResponse("VALIDATION_ERROR", message, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException exception) {
+        return buildErrorResponse("VALIDATION_ERROR", exception.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
     private ResponseEntity<ErrorResponse> buildErrorResponse(String code, String message, HttpStatus status) {
         return ResponseEntity.status(status)
                 .body(new ErrorResponse(code, message, Instant.now()));

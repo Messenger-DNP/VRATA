@@ -10,23 +10,28 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
 public class InMemoryUserRepository implements UserRepository {
-    private final Map<Long, User> users = new ConcurrentHashMap<>();
+    private final Map<Long, User> usersById = new ConcurrentHashMap<>();
+    private final Map<String, User> usersByUsername = new ConcurrentHashMap<>();
 
     @Override
     public Optional<User> findById(Long id) {
-        return Optional.ofNullable(users.get(id));
+        return Optional.ofNullable(usersById.get(id));
     }
 
     @Override
     public Optional<User> findByUsername(String username) {
-        return users.values().stream()
-                .filter(user -> user.username().equals(username))
-                .findFirst();
+        try {
+            String normalized = User.normalizeUsername(username);
+            return Optional.ofNullable(usersByUsername.get(normalized));
+        } catch (IllegalArgumentException exception) {
+            return Optional.empty();
+        }
     }
 
     @Override
     public User save(User user) {
-        users.put(user.id(), user);
+        usersById.put(user.id(), user);
+        usersByUsername.put(user.username(), user);
         return user;
     }
 }
