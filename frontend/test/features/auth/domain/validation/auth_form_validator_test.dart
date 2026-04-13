@@ -14,6 +14,17 @@ void main() {
       );
     });
 
+    test('validates username length and allowed characters', () {
+      expect(
+        AuthFormValidator.validateUsername('ab'),
+        AuthValidationError.usernameTooShort,
+      );
+      expect(
+        AuthFormValidator.validateUsername('alice!'),
+        AuthValidationError.usernameInvalidCharacters,
+      );
+    });
+
     test('treats whitespace-only passwords as empty', () {
       expect(
         AuthFormValidator.validatePassword('   '),
@@ -22,6 +33,25 @@ void main() {
       expect(
         AuthFormValidator.validatePasswordConfirmation('secret', '   '),
         AuthValidationError.emptyPasswordConfirmation,
+      );
+    });
+
+    test('validates password complexity rules', () {
+      expect(
+        AuthFormValidator.validatePassword('short1'),
+        AuthValidationError.passwordTooShort,
+      );
+      expect(
+        AuthFormValidator.validatePassword('password'),
+        AuthValidationError.passwordMissingDigit,
+      );
+      expect(
+        AuthFormValidator.validatePassword('12345678'),
+        AuthValidationError.passwordMissingLetter,
+      );
+      expect(
+        AuthFormValidator.validatePassword('secret 12'),
+        AuthValidationError.passwordContainsWhitespace,
       );
     });
 

@@ -31,7 +31,7 @@ void main() {
 
       final controller = container.read(loginControllerProvider.notifier);
 
-      await controller.submit(username: 'alice', password: 'topsecret');
+      await controller.submit(username: 'alice', password: 'topsecret1');
 
       final state = subscription.read();
       expect(state.status, AuthSubmissionStatus.success);
@@ -61,12 +61,42 @@ void main() {
 
       final controller = container.read(loginControllerProvider.notifier);
 
-      await controller.submit(username: 'alice', password: 'wrong');
+      await controller.submit(username: 'alice', password: 'wrongpass1');
 
       final state = subscription.read();
       expect(state.status, AuthSubmissionStatus.failure);
       expect(state.passwordError, 'Invalid username or password.');
       expect(state.session, isNull);
+    });
+
+    test('returns specific feedback for invalid username and password',
+        () async {
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWith(
+            (ref) => FakeAuthRepository(
+              onLogin: ({required username, required password}) async =>
+                  sampleSession,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        loginControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+
+      final controller = container.read(loginControllerProvider.notifier);
+
+      await controller.submit(username: 'alice!', password: 'password');
+
+      final state = subscription.read();
+      expect(state.status, AuthSubmissionStatus.failure);
+      expect(
+          state.usernameError, 'Use only letters, numbers, and underscores.');
+      expect(state.passwordError, 'Password must include at least one number.');
     });
 
     test('emits loading state while login request is in flight', () async {
@@ -90,7 +120,7 @@ void main() {
 
       final controller = container.read(loginControllerProvider.notifier);
       final future =
-          controller.submit(username: 'alice', password: 'topsecret');
+          controller.submit(username: 'alice', password: 'topsecret1');
 
       expect(subscription.read().status, AuthSubmissionStatus.loading);
 

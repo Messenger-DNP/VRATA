@@ -82,8 +82,24 @@ class RegisterController extends AutoDisposeNotifier<RegisterState> {
     switch (error) {
       case AuthValidationError.emptyUsername:
         return 'Please enter your username.';
+      case AuthValidationError.usernameTooShort:
+        return 'Username must be at least 3 characters.';
+      case AuthValidationError.usernameTooLong:
+        return 'Username must be 50 characters or fewer.';
+      case AuthValidationError.usernameInvalidCharacters:
+        return 'Use only letters, numbers, and underscores.';
       case AuthValidationError.emptyPassword:
         return 'Please enter your password.';
+      case AuthValidationError.passwordTooShort:
+        return 'Password must be at least 8 characters.';
+      case AuthValidationError.passwordTooLong:
+        return 'Password must be 128 characters or fewer.';
+      case AuthValidationError.passwordMissingLetter:
+        return 'Password must include at least one letter.';
+      case AuthValidationError.passwordMissingDigit:
+        return 'Password must include at least one number.';
+      case AuthValidationError.passwordContainsWhitespace:
+        return 'Password cannot contain spaces.';
       case AuthValidationError.emptyPasswordConfirmation:
         return 'Please repeat your password.';
       case AuthValidationError.passwordMismatch:

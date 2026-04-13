@@ -7,6 +7,7 @@ class AuthTextField extends StatelessWidget {
     required this.hintText,
     super.key,
     this.errorText,
+    this.helperText,
     this.obscureText = false,
     this.enabled = true,
     this.textInputAction,
@@ -18,6 +19,7 @@ class AuthTextField extends StatelessWidget {
   final String label;
   final String hintText;
   final String? errorText;
+  final String? helperText;
   final bool obscureText;
   final bool enabled;
   final TextInputAction? textInputAction;
@@ -41,6 +43,8 @@ class AuthTextField extends StatelessWidget {
         labelText: label,
         hintText: hintText,
         errorText: errorText,
+        helperText: helperText,
+        helperMaxLines: 2,
         fillColor: errorText == null
             ? theme.colorScheme.surface
             : theme.colorScheme.error.withAlpha(18),

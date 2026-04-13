@@ -79,6 +79,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               controller: _usernameController,
               label: 'Username',
               hintText: 'Enter your username',
+              helperText: '3-50 chars. Letters, numbers, and underscores only.',
               textInputAction: TextInputAction.next,
               enabled: !state.isLoading,
               errorText: state.usernameError,
@@ -89,6 +90,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               controller: _passwordController,
               label: 'Password',
               hintText: 'Enter your password',
+              helperText:
+                  '8-128 chars. Include letters and numbers. No spaces.',
               obscureText: true,
               enabled: !state.isLoading,
               errorText: state.passwordError,

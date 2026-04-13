@@ -33,7 +33,7 @@ void main() {
 
       await controller.submit(
         username: 'alice',
-        password: 'topsecret',
+        password: 'topsecret1',
         confirmPassword: 'different',
       );
 
@@ -67,14 +67,48 @@ void main() {
 
       await controller.submit(
         username: 'alice',
-        password: 'topsecret',
-        confirmPassword: 'topsecret',
+        password: 'topsecret1',
+        confirmPassword: 'topsecret1',
       );
 
       final state = subscription.read();
       expect(state.status, AuthSubmissionStatus.failure);
       expect(state.usernameError, 'This username is already taken.');
       expect(state.session, isNull);
+    });
+
+    test('returns specific feedback for invalid username and password',
+        () async {
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWith(
+            (ref) => FakeAuthRepository(
+              onRegister: ({required username, required password}) async =>
+                  sampleSession,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        registerControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+
+      final controller = container.read(registerControllerProvider.notifier);
+
+      await controller.submit(
+        username: 'alice!',
+        password: 'password',
+        confirmPassword: 'password',
+      );
+
+      final state = subscription.read();
+      expect(state.status, AuthSubmissionStatus.failure);
+      expect(
+          state.usernameError, 'Use only letters, numbers, and underscores.');
+      expect(state.passwordError, 'Password must include at least one number.');
     });
 
     test('emits success state when registration succeeds', () async {
@@ -99,8 +133,8 @@ void main() {
 
       await controller.submit(
         username: 'alice',
-        password: 'topsecret',
-        confirmPassword: 'topsecret',
+        password: 'topsecret1',
+        confirmPassword: 'topsecret1',
       );
 
       final state = subscription.read();
@@ -132,8 +166,8 @@ void main() {
       final controller = container.read(registerControllerProvider.notifier);
       final future = controller.submit(
         username: 'alice',
-        password: 'topsecret',
-        confirmPassword: 'topsecret',
+        password: 'topsecret1',
+        confirmPassword: 'topsecret1',
       );
 
       expect(subscription.read().status, AuthSubmissionStatus.loading);
