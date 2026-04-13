@@ -1,10 +1,12 @@
 package ru.vrata.backend.infrastructure.kafka.producer;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
 @Component
+@Slf4j
 public class KafkaProducer {
 
     private final KafkaTemplate<String, KafkaMessage> kafkaTemplate;
@@ -16,6 +18,12 @@ public class KafkaProducer {
     public void produce(KafkaMessage message) {
         String topic = "chat-room-" + message.roomId();
         kafkaTemplate.send(topic, message.id(), message);
-        System.out.println("Kafka producer sent message to topic=" + topic + " message=" + message);
+        log.info(
+                "Kafka message sent: topic={}, messageId={}, roomId={}, userId={}",
+                topic,
+                message.id(),
+                message.roomId(),
+                message.userId()
+        );
     }
 }
