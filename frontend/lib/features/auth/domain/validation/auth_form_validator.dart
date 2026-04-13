@@ -15,7 +15,7 @@ abstract final class AuthFormValidator {
   }
 
   static AuthValidationError? validatePassword(String password) {
-    if (password.isEmpty) {
+    if (password.trim().isEmpty) {
       return AuthValidationError.emptyPassword;
     }
 
@@ -26,7 +26,7 @@ abstract final class AuthFormValidator {
     String password,
     String confirmPassword,
   ) {
-    if (confirmPassword.isEmpty) {
+    if (confirmPassword.trim().isEmpty) {
       return AuthValidationError.emptyPasswordConfirmation;
     }
 

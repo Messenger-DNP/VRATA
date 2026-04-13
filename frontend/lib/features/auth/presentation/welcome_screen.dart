@@ -65,7 +65,7 @@ class WelcomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Private conversations with a calm, modern entry flow.',
+              'Open your vrata to communication',
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withAlpha(170),
@@ -81,15 +81,6 @@ class WelcomeScreen extends StatelessWidget {
             OutlinedButton(
               onPressed: () => context.go(AppRoutes.register),
               child: const Text('Create account'),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Simple sign-in, rounded UI, mock auth wired for the upcoming backend.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withAlpha(130),
-                height: 1.5,
-              ),
             ),
           ],
         ),

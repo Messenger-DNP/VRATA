@@ -1,14 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/features/auth/auth_providers.dart';
 import 'package:frontend/features/auth/domain/entities/auth_failure.dart';
 import 'package:frontend/features/auth/domain/validation/auth_form_validator.dart';
-import 'package:frontend/features/auth/presentation/providers/auth_providers.dart';
 import 'package:frontend/features/auth/presentation/state/auth_submission_status.dart';
 import 'package:frontend/features/auth/presentation/state/login_state.dart';
 
 final loginControllerProvider =
-    NotifierProvider<LoginController, LoginState>(LoginController.new);
+    AutoDisposeNotifierProvider<LoginController, LoginState>(
+  LoginController.new,
+);
 
-class LoginController extends Notifier<LoginState> {
+class LoginController extends AutoDisposeNotifier<LoginState> {
   @override
   LoginState build() => const LoginState();
 

@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/features/auth/auth_providers.dart';
 import 'package:frontend/features/auth/domain/entities/auth_failure.dart';
 import 'package:frontend/features/auth/domain/validation/auth_form_validator.dart';
-import 'package:frontend/features/auth/presentation/providers/auth_providers.dart';
 import 'package:frontend/features/auth/presentation/state/auth_submission_status.dart';
 import 'package:frontend/features/auth/presentation/state/register_state.dart';
 
 final registerControllerProvider =
-    NotifierProvider<RegisterController, RegisterState>(
+    AutoDisposeNotifierProvider<RegisterController, RegisterState>(
   RegisterController.new,
 );
 
-class RegisterController extends Notifier<RegisterState> {
+class RegisterController extends AutoDisposeNotifier<RegisterState> {
   @override
   RegisterState build() => const RegisterState();
 

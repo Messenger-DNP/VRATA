@@ -34,6 +34,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Logged in as ${next.session!.username}.'),
+          ),
+        );
+
       log(
         'Login success for ${next.session!.username} (userId=${next.session!.userId})',
         name: 'vrata.auth',

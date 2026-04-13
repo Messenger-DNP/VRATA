@@ -1,10 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/auth_providers.dart';
 import 'package:frontend/features/auth/domain/entities/auth_failure.dart';
 import 'package:frontend/features/auth/domain/entities/auth_session.dart';
 import 'package:frontend/features/auth/domain/repositories/auth_repository.dart';
 import 'package:frontend/features/auth/presentation/controllers/login_controller.dart';
-import 'package:frontend/features/auth/presentation/providers/auth_providers.dart';
 import 'package:frontend/features/auth/presentation/state/auth_submission_status.dart';
 
 void main() {
@@ -21,12 +23,17 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
+      final subscription = container.listen(
+        loginControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
 
       final controller = container.read(loginControllerProvider.notifier);
 
       await controller.submit(username: 'alice', password: 'topsecret');
 
-      final state = container.read(loginControllerProvider);
+      final state = subscription.read();
       expect(state.status, AuthSubmissionStatus.success);
       expect(state.session?.username, 'alice');
       expect(state.passwordError, isNull);
@@ -46,15 +53,51 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
+      final subscription = container.listen(
+        loginControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
 
       final controller = container.read(loginControllerProvider.notifier);
 
       await controller.submit(username: 'alice', password: 'wrong');
 
-      final state = container.read(loginControllerProvider);
+      final state = subscription.read();
       expect(state.status, AuthSubmissionStatus.failure);
       expect(state.passwordError, 'Invalid username or password.');
       expect(state.session, isNull);
+    });
+
+    test('emits loading state while login request is in flight', () async {
+      final completer = Completer<AuthSession>();
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWith(
+            (ref) => FakeAuthRepository(
+              onLogin: ({required username, required password}) =>
+                  completer.future,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        loginControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+
+      final controller = container.read(loginControllerProvider.notifier);
+      final future =
+          controller.submit(username: 'alice', password: 'topsecret');
+
+      expect(subscription.read().status, AuthSubmissionStatus.loading);
+
+      completer.complete(sampleSession.copyWith(username: 'alice'));
+      await future;
+
+      expect(subscription.read().status, AuthSubmissionStatus.success);
     });
   });
 }

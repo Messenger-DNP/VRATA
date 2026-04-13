@@ -14,6 +14,17 @@ void main() {
       );
     });
 
+    test('treats whitespace-only passwords as empty', () {
+      expect(
+        AuthFormValidator.validatePassword('   '),
+        AuthValidationError.emptyPassword,
+      );
+      expect(
+        AuthFormValidator.validatePasswordConfirmation('secret', '   '),
+        AuthValidationError.emptyPasswordConfirmation,
+      );
+    });
+
     test('returns mismatch error for different passwords', () {
       expect(
         AuthFormValidator.validatePasswordConfirmation('secret', 'different'),

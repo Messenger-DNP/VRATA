@@ -36,6 +36,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         return;
       }
 
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Account created for ${next.session!.username}.'),
+          ),
+        );
+
       log(
         'Registration success for ${next.session!.username} (userId=${next.session!.userId})',
         name: 'vrata.auth',

@@ -1,10 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/auth_providers.dart';
 import 'package:frontend/features/auth/domain/entities/auth_failure.dart';
 import 'package:frontend/features/auth/domain/entities/auth_session.dart';
 import 'package:frontend/features/auth/domain/repositories/auth_repository.dart';
 import 'package:frontend/features/auth/presentation/controllers/register_controller.dart';
-import 'package:frontend/features/auth/presentation/providers/auth_providers.dart';
 import 'package:frontend/features/auth/presentation/state/auth_submission_status.dart';
 
 void main() {
@@ -21,6 +23,11 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
+      final subscription = container.listen(
+        registerControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
 
       final controller = container.read(registerControllerProvider.notifier);
 
@@ -30,7 +37,7 @@ void main() {
         confirmPassword: 'different',
       );
 
-      final state = container.read(registerControllerProvider);
+      final state = subscription.read();
       expect(state.status, AuthSubmissionStatus.failure);
       expect(state.confirmPasswordError, 'Passwords do not match.');
       expect(state.session, isNull);
@@ -50,6 +57,11 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
+      final subscription = container.listen(
+        registerControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
 
       final controller = container.read(registerControllerProvider.notifier);
 
@@ -59,7 +71,7 @@ void main() {
         confirmPassword: 'topsecret',
       );
 
-      final state = container.read(registerControllerProvider);
+      final state = subscription.read();
       expect(state.status, AuthSubmissionStatus.failure);
       expect(state.usernameError, 'This username is already taken.');
       expect(state.session, isNull);
@@ -77,6 +89,11 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
+      final subscription = container.listen(
+        registerControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
 
       final controller = container.read(registerControllerProvider.notifier);
 
@@ -86,10 +103,45 @@ void main() {
         confirmPassword: 'topsecret',
       );
 
-      final state = container.read(registerControllerProvider);
+      final state = subscription.read();
       expect(state.status, AuthSubmissionStatus.success);
       expect(state.session?.username, 'alice');
       expect(state.usernameError, isNull);
+    });
+
+    test('emits loading state while registration request is in flight',
+        () async {
+      final completer = Completer<AuthSession>();
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWith(
+            (ref) => FakeAuthRepository(
+              onRegister: ({required username, required password}) =>
+                  completer.future,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        registerControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+
+      final controller = container.read(registerControllerProvider.notifier);
+      final future = controller.submit(
+        username: 'alice',
+        password: 'topsecret',
+        confirmPassword: 'topsecret',
+      );
+
+      expect(subscription.read().status, AuthSubmissionStatus.loading);
+
+      completer.complete(sampleSession.copyWith(username: 'alice'));
+      await future;
+
+      expect(subscription.read().status, AuthSubmissionStatus.success);
     });
   });
 }
