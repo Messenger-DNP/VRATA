@@ -9,6 +9,7 @@ class RegisterState {
     this.usernameError,
     this.passwordError,
     this.confirmPasswordError,
+    this.submissionError,
     this.session,
   });
 
@@ -16,6 +17,7 @@ class RegisterState {
   final String? usernameError;
   final String? passwordError;
   final String? confirmPasswordError;
+  final String? submissionError;
   final AuthSession? session;
 
   bool get isLoading => status == AuthSubmissionStatus.loading;
@@ -25,6 +27,7 @@ class RegisterState {
       usernameError != null ||
       passwordError != null ||
       confirmPasswordError != null ||
+      submissionError != null ||
       session != null;
 
   RegisterState copyWith({
@@ -32,6 +35,7 @@ class RegisterState {
     Object? usernameError = _sentinel,
     Object? passwordError = _sentinel,
     Object? confirmPasswordError = _sentinel,
+    Object? submissionError = _sentinel,
     Object? session = _sentinel,
   }) {
     return RegisterState(
@@ -45,6 +49,9 @@ class RegisterState {
       confirmPasswordError: confirmPasswordError == _sentinel
           ? this.confirmPasswordError
           : confirmPasswordError as String?,
+      submissionError: submissionError == _sentinel
+          ? this.submissionError
+          : submissionError as String?,
       session: session == _sentinel ? this.session : session as AuthSession?,
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/features/auth/auth_session_provider.dart';
 import 'package:frontend/features/auth/auth_providers.dart';
 import 'package:frontend/features/auth/domain/entities/auth_failure.dart';
 import 'package:frontend/features/auth/domain/validation/auth_form_validator.dart';
@@ -30,6 +31,7 @@ class LoginController extends AutoDisposeNotifier<LoginState> {
         status: AuthSubmissionStatus.failure,
         usernameError: usernameError,
         passwordError: passwordError,
+        submissionError: null,
         session: null,
       );
       return;
@@ -43,19 +45,18 @@ class LoginController extends AutoDisposeNotifier<LoginState> {
             password: password,
           );
 
+      ref.read(authSessionProvider.notifier).setSession(session);
+
       state = LoginState(
         status: AuthSubmissionStatus.success,
         session: session,
       );
     } on AuthFailureException catch (exception) {
-      state = LoginState(
-        status: AuthSubmissionStatus.failure,
-        passwordError: _mapFailureMessage(exception.failure),
-      );
+      state = _mapFailureState(exception.failure);
     } catch (_) {
       state = const LoginState(
         status: AuthSubmissionStatus.failure,
-        passwordError: 'Something went wrong. Please try again.',
+        submissionError: 'Something went wrong. Please try again.',
       );
     }
   }
@@ -97,11 +98,83 @@ class LoginController extends AutoDisposeNotifier<LoginState> {
     }
   }
 
-  String _mapFailureMessage(AuthFailure failure) {
+  LoginState _mapFailureState(AuthFailure failure) {
     if (failure is InvalidCredentialsFailure) {
-      return 'Invalid username or password.';
+      return const LoginState(
+        status: AuthSubmissionStatus.failure,
+        passwordError: 'Invalid username or password.',
+      );
     }
 
-    return 'Something went wrong. Please try again.';
+    if (failure is ValidationAuthFailure) {
+      final message = _formatMessage(failure.message);
+
+      if (_isUsernameMessage(message)) {
+        return LoginState(
+          status: AuthSubmissionStatus.failure,
+          usernameError: message,
+        );
+      }
+
+      if (_isPasswordMessage(message)) {
+        return LoginState(
+          status: AuthSubmissionStatus.failure,
+          passwordError: message,
+        );
+      }
+
+      return LoginState(
+        status: AuthSubmissionStatus.failure,
+        submissionError: message,
+      );
+    }
+
+    if (failure is NetworkAuthFailure) {
+      return LoginState(
+        status: AuthSubmissionStatus.failure,
+        submissionError: failure.message,
+      );
+    }
+
+    if (failure is ServerAuthFailure) {
+      return LoginState(
+        status: AuthSubmissionStatus.failure,
+        submissionError: failure.message,
+      );
+    }
+
+    if (failure is UnknownAuthFailure) {
+      return LoginState(
+        status: AuthSubmissionStatus.failure,
+        submissionError: failure.message,
+      );
+    }
+
+    return const LoginState(
+      status: AuthSubmissionStatus.failure,
+      submissionError: 'Something went wrong. Please try again.',
+    );
+  }
+
+  String _formatMessage(String message) {
+    if (message.isEmpty) {
+      return 'Something went wrong. Please try again.';
+    }
+
+    final normalized = '${message[0].toUpperCase()}${message.substring(1)}';
+
+    if (normalized.endsWith('.')) {
+      return normalized;
+    }
+
+    return '$normalized.';
+  }
+
+  bool _isUsernameMessage(String message) {
+    return message.toLowerCase().contains('username');
+  }
+
+  bool _isPasswordMessage(String message) {
+    return message.toLowerCase().contains('password');
   }
 }

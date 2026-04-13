@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/features/auth/auth_session_provider.dart';
 import 'package:frontend/features/auth/auth_providers.dart';
 import 'package:frontend/features/auth/domain/entities/auth_failure.dart';
 import 'package:frontend/features/auth/domain/validation/auth_form_validator.dart';
@@ -40,6 +41,7 @@ class RegisterController extends AutoDisposeNotifier<RegisterState> {
         usernameError: usernameError,
         passwordError: passwordError,
         confirmPasswordError: confirmPasswordError,
+        submissionError: null,
         session: null,
       );
       return;
@@ -53,19 +55,18 @@ class RegisterController extends AutoDisposeNotifier<RegisterState> {
             password: password,
           );
 
+      ref.read(authSessionProvider.notifier).setSession(session);
+
       state = RegisterState(
         status: AuthSubmissionStatus.success,
         session: session,
       );
     } on AuthFailureException catch (exception) {
-      state = RegisterState(
-        status: AuthSubmissionStatus.failure,
-        usernameError: _mapFailureMessage(exception.failure),
-      );
+      state = _mapFailureState(exception.failure);
     } catch (_) {
       state = const RegisterState(
         status: AuthSubmissionStatus.failure,
-        usernameError: 'Something went wrong. Please try again.',
+        submissionError: 'Something went wrong. Please try again.',
       );
     }
   }
@@ -109,11 +110,83 @@ class RegisterController extends AutoDisposeNotifier<RegisterState> {
     }
   }
 
-  String _mapFailureMessage(AuthFailure failure) {
+  RegisterState _mapFailureState(AuthFailure failure) {
     if (failure is UserAlreadyExistsFailure) {
-      return 'This username is already taken.';
+      return const RegisterState(
+        status: AuthSubmissionStatus.failure,
+        usernameError: 'This username is already taken.',
+      );
     }
 
-    return 'Something went wrong. Please try again.';
+    if (failure is ValidationAuthFailure) {
+      final message = _formatMessage(failure.message);
+
+      if (_isUsernameMessage(message)) {
+        return RegisterState(
+          status: AuthSubmissionStatus.failure,
+          usernameError: message,
+        );
+      }
+
+      if (_isPasswordMessage(message)) {
+        return RegisterState(
+          status: AuthSubmissionStatus.failure,
+          passwordError: message,
+        );
+      }
+
+      return RegisterState(
+        status: AuthSubmissionStatus.failure,
+        submissionError: message,
+      );
+    }
+
+    if (failure is NetworkAuthFailure) {
+      return RegisterState(
+        status: AuthSubmissionStatus.failure,
+        submissionError: failure.message,
+      );
+    }
+
+    if (failure is ServerAuthFailure) {
+      return RegisterState(
+        status: AuthSubmissionStatus.failure,
+        submissionError: failure.message,
+      );
+    }
+
+    if (failure is UnknownAuthFailure) {
+      return RegisterState(
+        status: AuthSubmissionStatus.failure,
+        submissionError: failure.message,
+      );
+    }
+
+    return const RegisterState(
+      status: AuthSubmissionStatus.failure,
+      submissionError: 'Something went wrong. Please try again.',
+    );
+  }
+
+  String _formatMessage(String message) {
+    if (message.isEmpty) {
+      return 'Something went wrong. Please try again.';
+    }
+
+    final normalized = '${message[0].toUpperCase()}${message.substring(1)}';
+
+    if (normalized.endsWith('.')) {
+      return normalized;
+    }
+
+    return '$normalized.';
+  }
+
+  bool _isUsernameMessage(String message) {
+    return message.toLowerCase().contains('username');
+  }
+
+  bool _isPasswordMessage(String message) {
+    return message.toLowerCase().contains('password');
   }
 }

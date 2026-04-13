@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/app/router/app_router.dart';
 import 'package:frontend/features/auth/presentation/controllers/login_controller.dart';
+import 'package:frontend/features/auth/presentation/widgets/auth_feedback_banner.dart';
 import 'package:frontend/features/auth/presentation/widgets/auth_flow_scaffold.dart';
 import 'package:frontend/features/auth/presentation/widgets/auth_panel.dart';
 import 'package:frontend/features/auth/presentation/widgets/auth_text_field.dart';
@@ -34,19 +35,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
-      final messenger = ScaffoldMessenger.of(context);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('Logged in as ${next.session!.username}.'),
-          ),
-        );
-
       log(
         'Login success for ${next.session!.username} (userId=${next.session!.userId})',
         name: 'vrata.auth',
       );
+
+      context.go(AppRoutes.lobby);
     });
 
     final state = ref.watch(loginControllerProvider);
@@ -98,6 +92,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               onChanged: (_) => controller.onFormChanged(),
               onSubmitted: (_) => _submit(controller),
             ),
+            if (state.submissionError != null) ...[
+              const SizedBox(height: 18),
+              AuthFeedbackBanner(message: state.submissionError!),
+            ],
             const SizedBox(height: 24),
             FilledButton(
               onPressed: state.isLoading ? null : () => _submit(controller),

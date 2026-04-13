@@ -8,15 +8,15 @@ void main() {
   runApp(const ProviderScope(child: VrataApp()));
 }
 
-class VrataApp extends StatelessWidget {
+class VrataApp extends ConsumerWidget {
   const VrataApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       title: 'VRATA',
       theme: AppTheme.light(),
-      routerConfig: appRouter,
+      routerConfig: ref.watch(appRouterProvider),
     );
   }
 }

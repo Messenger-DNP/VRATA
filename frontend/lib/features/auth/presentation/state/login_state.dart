@@ -8,12 +8,14 @@ class LoginState {
     this.status = AuthSubmissionStatus.idle,
     this.usernameError,
     this.passwordError,
+    this.submissionError,
     this.session,
   });
 
   final AuthSubmissionStatus status;
   final String? usernameError;
   final String? passwordError;
+  final String? submissionError;
   final AuthSession? session;
 
   bool get isLoading => status == AuthSubmissionStatus.loading;
@@ -22,12 +24,14 @@ class LoginState {
       status != AuthSubmissionStatus.idle ||
       usernameError != null ||
       passwordError != null ||
+      submissionError != null ||
       session != null;
 
   LoginState copyWith({
     AuthSubmissionStatus? status,
     Object? usernameError = _sentinel,
     Object? passwordError = _sentinel,
+    Object? submissionError = _sentinel,
     Object? session = _sentinel,
   }) {
     return LoginState(
@@ -38,6 +42,9 @@ class LoginState {
       passwordError: passwordError == _sentinel
           ? this.passwordError
           : passwordError as String?,
+      submissionError: submissionError == _sentinel
+          ? this.submissionError
+          : submissionError as String?,
       session: session == _sentinel ? this.session : session as AuthSession?,
     );
   }

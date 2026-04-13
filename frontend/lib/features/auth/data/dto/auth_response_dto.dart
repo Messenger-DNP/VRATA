@@ -12,4 +12,14 @@ class AuthResponseDto {
   final String tokenType;
   final String accessToken;
   final DateTime expiresAt;
+
+  factory AuthResponseDto.fromJson(Map<String, dynamic> json) {
+    return AuthResponseDto(
+      userId: (json['userId'] as num).toInt(),
+      username: json['username'] as String,
+      tokenType: json['tokenType'] as String,
+      accessToken: json['accessToken'] as String,
+      expiresAt: DateTime.parse(json['expiresAt'] as String),
+    );
+  }
 }

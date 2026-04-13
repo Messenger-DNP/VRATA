@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/auth_session_provider.dart';
 import 'package:frontend/features/auth/auth_providers.dart';
 import 'package:frontend/features/auth/domain/entities/auth_failure.dart';
 import 'package:frontend/features/auth/domain/entities/auth_session.dart';
@@ -75,6 +76,7 @@ void main() {
       expect(state.status, AuthSubmissionStatus.failure);
       expect(state.usernameError, 'This username is already taken.');
       expect(state.session, isNull);
+      expect(container.read(authSessionProvider), isNull);
     });
 
     test('returns specific feedback for invalid username and password',
@@ -141,6 +143,7 @@ void main() {
       expect(state.status, AuthSubmissionStatus.success);
       expect(state.session?.username, 'alice');
       expect(state.usernameError, isNull);
+      expect(container.read(authSessionProvider)?.username, 'alice');
     });
 
     test('emits loading state while registration request is in flight',
@@ -176,6 +179,40 @@ void main() {
       await future;
 
       expect(subscription.read().status, AuthSubmissionStatus.success);
+      expect(container.read(authSessionProvider)?.username, 'alice');
+    });
+
+    test('maps network failures to submission feedback', () async {
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWith(
+            (ref) => FakeAuthRepository(
+              onRegister: ({required username, required password}) async =>
+                  throw const AuthFailureException(
+                NetworkAuthFailure('Could not connect to the server.'),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        registerControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+
+      final controller = container.read(registerControllerProvider.notifier);
+
+      await controller.submit(
+        username: 'alice',
+        password: 'topsecret1',
+        confirmPassword: 'topsecret1',
+      );
+
+      final state = subscription.read();
+      expect(state.status, AuthSubmissionStatus.failure);
+      expect(state.submissionError, 'Could not connect to the server.');
     });
   });
 }
