@@ -66,9 +66,11 @@ public class ChatRoomService {
 
     private String generateUniqueInviteCode() {
         String code;
-        do {
+        code = randomInviteCode();
+
+        while (chatRoomRepository.findByInviteCode(code).isPresent()) {
             code = randomInviteCode();
-        } while (chatRoomRepository.findByInviteCode(code).isPresent());
+        }
         return code;
     }
 
