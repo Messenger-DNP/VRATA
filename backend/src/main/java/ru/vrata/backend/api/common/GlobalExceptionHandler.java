@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.vrata.backend.api.common.dto.ErrorResponse;
 import ru.vrata.backend.domain.exception.InvalidCredentialsException;
+import ru.vrata.backend.domain.exception.RoomNotFoundException;
 import ru.vrata.backend.domain.exception.UserAlreadyExistsException;
 
 import java.time.Instant;
@@ -23,6 +24,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException exception) {
         return buildErrorResponse("INVALID_CREDENTIALS", exception.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(RoomNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleRoomNotFound(RoomNotFoundException exception) {
+        return buildErrorResponse("ROOM_NOT_FOUND", exception.getMessage(), HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

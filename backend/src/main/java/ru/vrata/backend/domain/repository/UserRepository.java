@@ -9,5 +9,5 @@ public interface UserRepository {
 
     Optional<User> findByUsername(String username);
 
-    User save(User user);
+    User create(User user);
 }

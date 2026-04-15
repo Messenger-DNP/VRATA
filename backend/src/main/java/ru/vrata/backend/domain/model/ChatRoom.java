@@ -1,11 +1,12 @@
 package ru.vrata.backend.domain.model;
 
 import java.util.Locale;
-import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
 public record ChatRoom(Long id, String name, String inviteCode) {
-    private static final Pattern INVITE_CODE_PATTERN = Pattern.compile("^[A-Z0-9]{8}$");
+    private static final Pattern INVITE_CODE_PATTERN = Pattern.compile("^[a-z]{6}$");
+    private static final int INVITE_CODE_LENGTH = 6;
 
     public ChatRoom {
         if (id == null || id <= 0) {
@@ -34,9 +35,9 @@ public record ChatRoom(Long id, String name, String inviteCode) {
         if (raw == null || raw.isBlank()) {
             throw new IllegalArgumentException("invite code must not be blank");
         }
-        String normalized = raw.trim().toUpperCase(Locale.ROOT);
+        String normalized = raw.trim().toLowerCase(Locale.ROOT);
         if (!INVITE_CODE_PATTERN.matcher(normalized).matches()) {
-            throw new IllegalArgumentException("invite code must be 8 chars A-Z0-9");
+            throw new IllegalArgumentException("invite code must be 6 lowercase Latin letters");
         }
         return normalized;
     }
@@ -46,6 +47,10 @@ public record ChatRoom(Long id, String name, String inviteCode) {
     }
 
     private static String generateInviteCode() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
+        StringBuilder code = new StringBuilder(INVITE_CODE_LENGTH);
+        for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
+            code.append((char) ('a' + ThreadLocalRandom.current().nextInt(26)));
+        }
+        return code.toString();
     }
 }
