@@ -5,20 +5,18 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
+/**
+ * Consumes chat messages from Kafka topics that match the configured pattern.
+ */
 @Slf4j
 @Component
 public class KafkaMessageConsumer {
-    /**
-     * Listens to all chat topics.
-     * Example topics:
-     * - chat-room-1
-     * - chat-room-2
-     * - chat-room-15
-     *
-     * topicPattern means:
-     * listen to every Kafka topic whose name matches this regex.
-     */
 
+    /**
+     * Receives a Kafka message, validates it, and prepares it for delivery.
+     *
+     * @param message incoming chat message
+     */
     @KafkaListener(
             topicPattern = "${app.kafka.chat-topic-pattern}",
             groupId = "${spring.kafka.consumer.group-id}"
@@ -56,6 +54,12 @@ public class KafkaMessageConsumer {
 
     }
 
+    /**
+     * Checks whether the received message contains all required fields.
+     *
+     * @param message Kafka message to validate
+     * @return true if the message is valid, otherwise false
+     */
     private boolean isValid(KafkaMessage message) {
         return message != null
                 && message.id() != null
@@ -67,6 +71,11 @@ public class KafkaMessageConsumer {
                 && !message.content().isBlank();
     }
 
+    /**
+     * Prepares a valid message for delivery to room participants.
+     *
+     * @param message validated Kafka message
+     */
     private void prepareMessageDelivery(KafkaMessage message) {
         log.info(
                 "Preparing message delivery: messageId={}, roomId={}, username={}",
