@@ -29,7 +29,7 @@ public class InMemoryUserRepository implements UserRepository {
     }
 
     @Override
-    public User save(User user) {
+    public User create(User user) {
         usersById.put(user.id(), user);
         usersByUsername.put(user.username(), user);
         return user;

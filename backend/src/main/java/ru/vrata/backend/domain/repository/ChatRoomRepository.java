@@ -9,6 +9,17 @@ public interface ChatRoomRepository {
 
     Optional<ChatRoom> findByInviteCode(String inviteCode);
 
-    ChatRoom save(ChatRoom chatRoom);
-    // TODO: add create/join methods
+    Optional<ChatRoom> findByUserId(Long userId);
+
+    boolean isUserInRoom(Long roomId, Long userId);
+
+    void addMember(Long roomId, Long userId);
+
+    void removeMember(Long roomId, Long userId);
+
+    boolean hasMembers(Long roomId);
+
+    void deleteRoom(Long roomId);
+
+    ChatRoom create(ChatRoom chatRoom);
 }

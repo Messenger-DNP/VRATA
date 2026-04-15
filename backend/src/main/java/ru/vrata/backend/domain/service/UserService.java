@@ -36,7 +36,7 @@ public class UserService {
                 normalizedUsername,
                 hashPassword(rawPassword)
         );
-        userRepository.save(user);
+        userRepository.create(user);
 
         return createAuthSession(user);
     }

@@ -3,6 +3,7 @@ package ru.vrata.backend.domain.model;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DomainModelTest {
+    private static final Pattern INVITE_CODE_PATTERN = Pattern.compile("^[a-z]{6}$");
 
     @Test
     void userShouldNormalizeAndValidate() {
@@ -26,6 +28,15 @@ class DomainModelTest {
         ChatRoom room = ChatRoom.create(1L, " Main room ");
 
         assertTrue(room.hasInviteCode(room.inviteCode().toLowerCase()));
+        assertTrue(room.hasInviteCode(room.inviteCode().toUpperCase()));
+        assertTrue(INVITE_CODE_PATTERN.matcher(room.inviteCode()).matches());
+    }
+
+    @Test
+    void chatRoomShouldRejectInvalidInviteCode() {
+        assertThrows(IllegalArgumentException.class, () -> ChatRoom.normalizeInviteCode("abc12x"));
+        assertThrows(IllegalArgumentException.class, () -> ChatRoom.normalizeInviteCode("abcde"));
+        assertThrows(IllegalArgumentException.class, () -> ChatRoom.normalizeInviteCode("abcdefg"));
     }
 
     @Test
