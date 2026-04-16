@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: VRATA Backend API
-  version: 1.0.0
+  version: 1.1.0
   description: |
-    Base API for user authorization and integration contracts.
+    API for user authorization, room lifecycle management, and integration contracts.
 servers:
   - url: http://localhost:8080
     description: Local backend server
@@ -66,6 +66,87 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/rooms:
+    post:
+      tags: [Rooms]
+      summary: Create a chat room and auto-join creator
+      operationId: createRoom
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoomRequest'
+      responses:
+        '201':
+          description: Room created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/rooms/join:
+    post:
+      tags: [Rooms]
+      summary: Join an existing room by invite code
+      operationId: joinRoom
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinRoomRequest'
+      responses:
+        '200':
+          description: Room joined successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Room not found by invite code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/rooms/leave:
+    post:
+      tags: [Rooms]
+      summary: Leave current room by user id
+      operationId: leaveRoom
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveRoomRequest'
+      responses:
+        '200':
+          description: Leave processed successfully (idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRoomResponse'
+        '400':
+          description: Validation error
           content:
             application/json:
               schema:
@@ -139,6 +220,80 @@ components:
           type: string
           format: date-time
           example: 2026-04-10T08:14:00Z
+
+    CreateRoomRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 42
+        name:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: Optional room name. If omitted or blank, server generates `room-{id}`.
+          example: Team lounge
+
+    JoinRoomRequest:
+      type: object
+      required: [userId, inviteCode]
+      properties:
+        userId:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 42
+        inviteCode:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: '^[A-Za-z]{6}$'
+          description: 6-letter Latin invite code, case-insensitive in requests.
+          example: AbCdEf
+
+    LeaveRoomRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 42
+
+    RoomResponse:
+      type: object
+      required: [id, name, inviteCode]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 7
+        name:
+          type: string
+          example: Team lounge
+        inviteCode:
+          type: string
+          pattern: '^[a-z]{6}$'
+          example: kztmqa
+
+    LeaveRoomResponse:
+      type: object
+      required: [roomDeleted]
+      properties:
+        leftRoomId:
+          type: integer
+          format: int64
+          nullable: true
+          description: Room id from which user was removed. Null when user was not in any room.
+          example: 7
+        roomDeleted:
+          type: boolean
+          description: True when room was deleted automatically because it became empty.
+          example: false
 
     AuthEvent:
       type: object
