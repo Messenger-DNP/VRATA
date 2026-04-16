@@ -48,6 +48,11 @@ public class InMemoryChatRoomRepository implements ChatRoomRepository {
     }
 
     @Override
+    public Set<Long> findMemberIdsByRoomId(Long roomId) {
+        return Set.copyOf(membersByRoomId.getOrDefault(roomId, Collections.emptySet()));
+    }
+
+    @Override
     public synchronized void addMember(Long roomId, Long userId) {
         requireRoomExists(roomId);
 
