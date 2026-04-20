@@ -3,6 +3,7 @@ package ru.vrata.backend.domain.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
+import ru.vrata.backend.domain.repository.DeliveredMessageRepository;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
 import java.util.Set;
@@ -16,9 +17,13 @@ import java.util.Set;
 public class KafkaMessageDeliveryService {
 
     private final ChatRoomRepository chatRoomRepository;
+    private final DeliveredMessageRepository deliveredMessageRepository;
 
-    public KafkaMessageDeliveryService(ChatRoomRepository chatRoomRepository) {
+    public KafkaMessageDeliveryService(ChatRoomRepository chatRoomRepository,
+                                       DeliveredMessageRepository deliveredMessageRepository)
+    {
         this.chatRoomRepository = chatRoomRepository;
+        this.deliveredMessageRepository = deliveredMessageRepository;
     }
 
     /**
@@ -48,12 +53,15 @@ public class KafkaMessageDeliveryService {
         );
 
         for (Long memberId : memberIds) {
+            deliveredMessageRepository.saveForUser(memberId, message);
             log.info(
                     "Delivery: messageId={} delivered to userId={} in roomId={}",
                     message.id(),
                     memberId,
                     message.roomId()
             );
+
+
         }
 
         log.info(
