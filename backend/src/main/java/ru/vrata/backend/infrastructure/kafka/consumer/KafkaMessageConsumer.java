@@ -1,25 +1,29 @@
 package ru.vrata.backend.infrastructure.kafka.consumer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import ru.vrata.backend.domain.service.KafkaMessageDeliveryService;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
-
+/**
+ * Consumes chat messages from Kafka topics that match the configured pattern.
+ */
+@Slf4j
 @Component
 public class KafkaMessageConsumer {
-    /**
-     * Listens to all chat topics.
-     * Example topics:
-     * - chat-room-1
-     * - chat-room-2
-     * - chat-room-15
-     *
-     * topicPattern means:
-     * listen to every Kafka topic whose name matches this regex.
-     */
-    private static final Logger log = LoggerFactory.getLogger(KafkaMessageConsumer.class);
 
+    private final KafkaMessageDeliveryService deliveryService;
+
+    public KafkaMessageConsumer(KafkaMessageDeliveryService deliveryService) {
+        this.deliveryService = deliveryService;
+    }
+
+    /**
+     * Receives a Kafka message, validates it, and passes it to the delivery service.
+     *
+     * @param message incoming chat message
+     */
     @KafkaListener(
             topicPattern = "${app.kafka.chat-topic-pattern}",
             groupId = "${spring.kafka.consumer.group-id}"
@@ -39,14 +43,8 @@ public class KafkaMessageConsumer {
                     message.username(),
                     message.content()
             );
-            prepareMessageDelivery(message);
 
-
-
-            log.info(
-                    "Message is prepared for further delivery to users in room {}",
-                    message.roomId()
-            );
+            deliveryService.deliver(message);
         } catch (Exception e) {
             log.error(
                     "Error while processing Kafka message with id={}",
@@ -54,9 +52,14 @@ public class KafkaMessageConsumer {
                     e
             );
         }
-
     }
 
+    /**
+     * Checks whether the received message contains all required fields.
+     *
+     * @param message Kafka message to validate
+     * @return true if the message is valid, otherwise false
+     */
     private boolean isValid(KafkaMessage message) {
         return message != null
                 && message.id() != null
@@ -66,16 +69,5 @@ public class KafkaMessageConsumer {
                 && !message.username().isBlank()
                 && message.content() != null
                 && !message.content().isBlank();
-    }
-
-    private void prepareMessageDelivery(KafkaMessage message) {
-        log.info(
-                "Preparing message delivery: messageId={}, roomId={}, username={}",
-                message.id(),
-                message.roomId(),
-                message.username()
-        );
-
-        // TODO: deliver message to active users of this room
     }
 }

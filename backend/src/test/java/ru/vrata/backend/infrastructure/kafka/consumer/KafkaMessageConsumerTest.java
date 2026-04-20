@@ -2,17 +2,24 @@ package ru.vrata.backend.infrastructure.kafka.consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import ru.vrata.backend.domain.service.KafkaMessageDeliveryService;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 class KafkaMessageConsumerTest {
 
     private KafkaMessageConsumer consumer;
+    private KafkaMessageDeliveryService deliveryService;
 
     @BeforeEach
     void setUp() {
-        consumer = new KafkaMessageConsumer();
+        deliveryService = Mockito.mock(KafkaMessageDeliveryService.class);
+        consumer = new KafkaMessageConsumer(deliveryService);
     }
 
     @Test
@@ -21,16 +28,20 @@ class KafkaMessageConsumerTest {
                 "msg-1",
                 1L,
                 10L,
-                "vika",
+                "riia",
                 "hello"
         );
 
         assertDoesNotThrow(() -> consumer.consume(message));
+
+        verify(deliveryService, times(1)).deliver(message);
     }
 
     @Test
     void consumeShouldIgnoreNullMessageWithoutException() {
         assertDoesNotThrow(() -> consumer.consume(null));
+
+        verify(deliveryService, never()).deliver(Mockito.any());
     }
 
     @Test
@@ -39,11 +50,13 @@ class KafkaMessageConsumerTest {
                 null,
                 1L,
                 10L,
-                "vika",
+                "riia",
                 "hello"
         );
 
         assertDoesNotThrow(() -> consumer.consume(message));
+
+        verify(deliveryService, never()).deliver(Mockito.any());
     }
 
     @Test
@@ -57,6 +70,8 @@ class KafkaMessageConsumerTest {
         );
 
         assertDoesNotThrow(() -> consumer.consume(message));
+
+        verify(deliveryService, never()).deliver(Mockito.any());
     }
 
     @Test
@@ -65,10 +80,12 @@ class KafkaMessageConsumerTest {
                 "msg-3",
                 1L,
                 10L,
-                "vika",
+                "riia",
                 "   "
         );
 
         assertDoesNotThrow(() -> consumer.consume(message));
+
+        verify(deliveryService, never()).deliver(Mockito.any());
     }
 }

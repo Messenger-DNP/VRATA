@@ -3,6 +3,7 @@ package ru.vrata.backend.domain.repository;
 import ru.vrata.backend.domain.model.ChatRoom;
 
 import java.util.Optional;
+import java.util.Set;
 
 public interface ChatRoomRepository {
     Optional<ChatRoom> findById(Long id);
@@ -12,6 +13,8 @@ public interface ChatRoomRepository {
     Optional<ChatRoom> findByUserId(Long userId);
 
     boolean isUserInRoom(Long roomId, Long userId);
+
+    Set<Long> findMemberIdsByRoomId(Long roomId);
 
     void addMember(Long roomId, Long userId);
 
