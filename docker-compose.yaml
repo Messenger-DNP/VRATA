@@ -9,6 +9,7 @@ services:
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
       SPRING_DATA_MONGODB_URI: ${SPRING_DATA_MONGODB_URI:-mongodb://admin:admin@mongodb:27017/chatdb?authSource=admin}
+      APP_MESSAGE_ENCRYPTION_KEY: ${APP_MESSAGE_ENCRYPTION_KEY:-MDEyMzQ1Njc4OWFiY2RlZg==}
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:*,http://127.0.0.1:*}
     depends_on:
       - kafka
