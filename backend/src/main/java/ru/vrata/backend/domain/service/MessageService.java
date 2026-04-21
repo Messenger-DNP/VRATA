@@ -4,17 +4,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.vrata.backend.domain.model.Message;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
+import ru.vrata.backend.domain.repository.DeliveredMessageRepository;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 import ru.vrata.backend.infrastructure.kafka.producer.KafkaProducer;
+
+import java.util.List;
 
 @Service
 @Slf4j
 public class MessageService {
     private final ChatRoomRepository chatRoomRepository;
+    private final DeliveredMessageRepository deliveredMessageRepository;
     private final KafkaProducer kafkaProducer;
 
-    public MessageService(ChatRoomRepository chatRoomRepository, KafkaProducer kafkaProducer) {
+    public MessageService(ChatRoomRepository chatRoomRepository,
+                          DeliveredMessageRepository deliveredMessageRepository,
+                          KafkaProducer kafkaProducer)
+    {
         this.chatRoomRepository = chatRoomRepository;
+        this.deliveredMessageRepository = deliveredMessageRepository;
         this.kafkaProducer = kafkaProducer;
     }
 
@@ -39,5 +47,33 @@ public class MessageService {
                 message.content()
         );
         kafkaProducer.produce(kafkaMessage);
+    }
+
+    public List<KafkaMessage> getMessagesForRoom(Long roomId, Long userId) {
+        validateRoomId(roomId);
+        validateUserId(userId);
+
+        chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("Room not found"));
+
+        if (!chatRoomRepository.isUserInRoom(roomId, userId)) {
+            throw new IllegalArgumentException("User is not in the room");
+        }
+
+        return deliveredMessageRepository.findByUserId(userId).stream()
+                .filter(message -> roomId.equals(message.roomId()))
+                .toList();
+    }
+
+    private void validateUserId(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new IllegalArgumentException("user id must be positive");
+        }
+    }
+
+    private void validateRoomId(Long roomId) {
+        if (roomId == null || roomId <= 0) {
+            throw new IllegalArgumentException("room id must be positive");
+        }
     }
 }
