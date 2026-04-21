@@ -20,7 +20,9 @@ public class MessageService {
 
     public void sendMessage(Long roomId, Long userId, String username, String content) {
         var room = chatRoomRepository.findById(roomId).orElseThrow(() -> new IllegalArgumentException("Room not found"));
-        // TODO: check that user is in the room
+        if (!chatRoomRepository.isUserInRoom(roomId, userId)) {
+            throw new IllegalArgumentException("User is not in the room");
+        }
         Message message = Message.create(room.id(), userId, username, content);
         log.info(
                 "Creating message: messageId={}, roomId={}, userId={}, username={}",
