@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/auth/auth_session_provider.dart';
@@ -63,6 +65,41 @@ void main() {
       expect(state.status, ChatLobbySubmissionStatus.success);
       expect(state.room?.id, 7);
       expect(state.inviteCodeError, isNull);
+    });
+
+    test('ignores duplicate submit while join request is loading', () async {
+      final completer = Completer<ChatRoom>();
+      var calls = 0;
+      final container = _buildContainer(
+        repository: FakeChatLobbyRepository(
+          onJoinChat: ({required userId, required inviteCode}) {
+            calls++;
+            return completer.future;
+          },
+        ),
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        joinChatControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+
+      final controller = container.read(joinChatControllerProvider.notifier);
+      final future = controller.submit(inviteCode: 'AbCdEf');
+
+      expect(subscription.read().status, ChatLobbySubmissionStatus.loading);
+
+      await controller.submit(inviteCode: 'abc12x');
+
+      expect(calls, 1);
+      expect(subscription.read().status, ChatLobbySubmissionStatus.loading);
+      expect(subscription.read().inviteCodeError, isNull);
+
+      completer.complete(sampleRoom);
+      await future;
+
+      expect(subscription.read().status, ChatLobbySubmissionStatus.success);
     });
 
     test('maps room not found to invite code feedback', () async {

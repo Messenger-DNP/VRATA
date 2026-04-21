@@ -92,6 +92,41 @@ void main() {
       expect(subscription.read().status, ChatLobbySubmissionStatus.success);
     });
 
+    test('ignores duplicate submit while create request is loading', () async {
+      final completer = Completer<ChatRoom>();
+      var calls = 0;
+      final container = _buildContainer(
+        repository: FakeChatLobbyRepository(
+          onCreateChat: ({required userId, required name}) {
+            calls++;
+            return completer.future;
+          },
+        ),
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        createChatControllerProvider,
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+
+      final controller = container.read(createChatControllerProvider.notifier);
+      final future = controller.submit(name: 'Project Mars');
+
+      expect(subscription.read().status, ChatLobbySubmissionStatus.loading);
+
+      await controller.submit(name: '');
+
+      expect(calls, 1);
+      expect(subscription.read().status, ChatLobbySubmissionStatus.loading);
+      expect(subscription.read().nameError, isNull);
+
+      completer.complete(sampleRoom);
+      await future;
+
+      expect(subscription.read().status, ChatLobbySubmissionStatus.success);
+    });
+
     test('maps invalid credentials to submission feedback', () async {
       final container = _buildContainer(
         repository: FakeChatLobbyRepository(

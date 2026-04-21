@@ -16,6 +16,10 @@ class CreateChatController extends AutoDisposeNotifier<CreateChatState> {
   CreateChatState build() => const CreateChatState();
 
   Future<void> submit({required String name}) async {
+    if (state.isLoading) {
+      return;
+    }
+
     final nameError = _mapValidationError(
       ChatLobbyFormValidator.validateChatName(name),
     );

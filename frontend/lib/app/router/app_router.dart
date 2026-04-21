@@ -6,7 +6,7 @@ import 'package:frontend/features/auth/presentation/login_screen.dart';
 import 'package:frontend/features/auth/presentation/register_screen.dart';
 import 'package:frontend/features/auth/presentation/welcome_screen.dart';
 import 'package:frontend/features/chat_lobby/domain/entities/chat_room.dart';
-import 'package:frontend/features/char_room/presentation/chat_screen.dart';
+import 'package:frontend/features/chat_room/presentation/chat_screen.dart';
 import 'package:frontend/features/chat_lobby/presentation/create_chat_screen.dart';
 import 'package:frontend/features/chat_lobby/presentation/join_chat_screen.dart';
 import 'package:frontend/features/chat_lobby/presentation/lobby_screen.dart';

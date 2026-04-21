@@ -16,6 +16,10 @@ class JoinChatController extends AutoDisposeNotifier<JoinChatState> {
   JoinChatState build() => const JoinChatState();
 
   Future<void> submit({required String inviteCode}) async {
+    if (state.isLoading) {
+      return;
+    }
+
     final inviteCodeError = _mapValidationError(
       ChatLobbyFormValidator.validateInviteCode(inviteCode),
     );
