@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.vrata.backend.domain.model.Message;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
+import ru.vrata.backend.infrastructure.crypto.MessageCryptoService;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 import ru.vrata.backend.infrastructure.kafka.producer.KafkaProducer;
 
@@ -12,10 +13,15 @@ import ru.vrata.backend.infrastructure.kafka.producer.KafkaProducer;
 public class MessageService {
     private final ChatRoomRepository chatRoomRepository;
     private final KafkaProducer kafkaProducer;
+    private final MessageCryptoService messageCryptoService;
 
-    public MessageService(ChatRoomRepository chatRoomRepository, KafkaProducer kafkaProducer) {
+    public MessageService(ChatRoomRepository chatRoomRepository,
+                          KafkaProducer kafkaProducer,
+                          MessageCryptoService messageCryptoService)
+    {
         this.chatRoomRepository = chatRoomRepository;
         this.kafkaProducer = kafkaProducer;
+        this.messageCryptoService = messageCryptoService;
     }
 
     public void sendMessage(Long roomId, Long userId, String username, String content) {
@@ -31,12 +37,13 @@ public class MessageService {
                 message.userId(),
                 message.username()
         );
+        String encryptedContent = messageCryptoService.encrypt(message.content());
         KafkaMessage kafkaMessage = new KafkaMessage(
                 message.id().toString(),
                 message.roomId(),
                 message.userId(),
                 message.username(),
-                message.content()
+                encryptedContent
         );
         kafkaProducer.produce(kafkaMessage);
     }

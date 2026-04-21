@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import ru.vrata.backend.domain.model.ChatRoom;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
+import ru.vrata.backend.infrastructure.crypto.MessageCryptoService;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 import ru.vrata.backend.infrastructure.kafka.producer.KafkaProducer;
 
@@ -14,16 +15,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class MessageServiceTest {
+    private static final String TEST_BASE64_KEY = "MDEyMzQ1Njc4OWFiY2RlZg==";
 
     private ChatRoomRepository chatRoomRepository;
     private KafkaProducer kafkaProducer;
+    private MessageCryptoService messageCryptoService;
     private MessageService service;
 
     @BeforeEach
     void setUp() {
         chatRoomRepository = mock(ChatRoomRepository.class);
         kafkaProducer = mock(KafkaProducer.class);
-        service = new MessageService(chatRoomRepository, kafkaProducer);
+        messageCryptoService = new MessageCryptoService(TEST_BASE64_KEY);
+        service = new MessageService(chatRoomRepository, kafkaProducer, messageCryptoService);
     }
 
     @Test
@@ -38,7 +42,8 @@ class MessageServiceTest {
         assertEquals(1L, sentMessage.roomId());
         assertEquals(10L, sentMessage.userId());
         assertEquals("username", sentMessage.username());
-        assertEquals("test", sentMessage.content());
+        assertNotEquals("test", sentMessage.content());
+        assertTrue(sentMessage.content().startsWith("enc:v1:"));
         assertNotNull(sentMessage.id());
     }
 

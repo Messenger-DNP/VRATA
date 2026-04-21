@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import ru.vrata.backend.domain.service.KafkaMessageDeliveryService;
+import ru.vrata.backend.infrastructure.crypto.MessageCryptoService;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
 /**
@@ -14,9 +15,13 @@ import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 public class KafkaMessageConsumer {
 
     private final KafkaMessageDeliveryService deliveryService;
+    private final MessageCryptoService messageCryptoService;
 
-    public KafkaMessageConsumer(KafkaMessageDeliveryService deliveryService) {
+    public KafkaMessageConsumer(KafkaMessageDeliveryService deliveryService,
+                                MessageCryptoService messageCryptoService)
+    {
         this.deliveryService = deliveryService;
+        this.messageCryptoService = messageCryptoService;
     }
 
     /**
@@ -35,16 +40,25 @@ public class KafkaMessageConsumer {
                 return;
             }
 
-            log.info(
-                    "Kafka message received: id={}, roomId={}, userId={}, username={}, content={}",
+            String decryptedContent = messageCryptoService.decrypt(message.content());
+            KafkaMessage decryptedMessage = new KafkaMessage(
                     message.id(),
                     message.roomId(),
                     message.userId(),
                     message.username(),
-                    message.content()
+                    decryptedContent
             );
 
-            deliveryService.deliver(message);
+            log.info(
+                    "Kafka message received: id={}, roomId={}, userId={}, username={}, encrypted={}",
+                    decryptedMessage.id(),
+                    decryptedMessage.roomId(),
+                    decryptedMessage.userId(),
+                    decryptedMessage.username(),
+                    true
+            );
+
+            deliveryService.deliver(decryptedMessage);
         } catch (Exception e) {
             log.error(
                     "Error while processing Kafka message with id={}",
