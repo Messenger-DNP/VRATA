@@ -8,8 +8,8 @@ import 'package:frontend/features/chat_lobby/presentation/state/create_chat_stat
 
 final createChatControllerProvider =
     AutoDisposeNotifierProvider<CreateChatController, CreateChatState>(
-  CreateChatController.new,
-);
+      CreateChatController.new,
+    );
 
 class CreateChatController extends AutoDisposeNotifier<CreateChatState> {
   @override
@@ -46,10 +46,9 @@ class CreateChatController extends AutoDisposeNotifier<CreateChatState> {
     state = const CreateChatState(status: ChatLobbySubmissionStatus.loading);
 
     try {
-      final room = await ref.read(createChatUseCaseProvider).call(
-            userId: session.userId,
-            name: name,
-          );
+      final room = await ref
+          .read(createChatUseCaseProvider)
+          .call(userId: session.userId, name: name);
 
       state = CreateChatState(
         status: ChatLobbySubmissionStatus.success,
@@ -78,9 +77,9 @@ class CreateChatController extends AutoDisposeNotifier<CreateChatState> {
       case ChatLobbyValidationError.emptyChatName:
         return 'Please enter a chat name.';
       case ChatLobbyValidationError.chatNameTooShort:
-        return 'Chat name must be at least 3 characters.';
+        return 'Chat name must be at least 1 characters.';
       case ChatLobbyValidationError.chatNameTooLong:
-        return 'Chat name must be 100 characters or fewer.';
+        return 'Chat name must be 50 characters or fewer.';
       case null:
       case ChatLobbyValidationError.emptyInviteCode:
       case ChatLobbyValidationError.inviteCodeInvalid:

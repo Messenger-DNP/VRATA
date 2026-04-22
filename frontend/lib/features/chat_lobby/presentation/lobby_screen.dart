@@ -16,19 +16,7 @@ class LobbyScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Lobby'),
         automaticallyImplyLeading: false,
-        leading: IconButton(
-          onPressed: () {},
-          tooltip: 'Menu',
-          icon: const Icon(Icons.menu_rounded),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: _UserAvatar(username: session?.username),
-          ),
-        ],
       ),
-      bottomNavigationBar: const _LobbyBottomNavigation(),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -47,7 +35,7 @@ class LobbyScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Signed in as ${session?.username ?? 'guest'}. Choose an action to start chatting in a shared space.',
+                    'Signed in as ${session?.username ?? 'guest'}.\nChoose an action to start chatting in a shared space.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: theme.colorScheme.onSurface.withAlpha(160),
@@ -77,30 +65,6 @@ class LobbyScreen extends ConsumerWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _UserAvatar extends StatelessWidget {
-  const _UserAvatar({required this.username});
-
-  final String? username;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final initial = (username?.trim().isNotEmpty ?? false)
-        ? username!.trim().characters.first.toUpperCase()
-        : '?';
-
-    return CircleAvatar(
-      radius: 17,
-      backgroundColor: theme.colorScheme.primary.withAlpha(28),
-      foregroundColor: theme.colorScheme.primary,
-      child: Text(
-        initial,
-        style: const TextStyle(fontWeight: FontWeight.w800),
       ),
     );
   }
@@ -176,33 +140,6 @@ class _LobbyActionCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _LobbyBottomNavigation extends StatelessWidget {
-  const _LobbyBottomNavigation();
-
-  @override
-  Widget build(BuildContext context) {
-    return NavigationBar(
-      selectedIndex: 0,
-      labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-      onDestinationSelected: (_) {},
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.chat_bubble_rounded),
-          label: 'Chats',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.group_rounded),
-          label: 'People',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.settings_rounded),
-          label: 'Settings',
-        ),
-      ],
     );
   }
 }
