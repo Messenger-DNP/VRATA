@@ -1,0 +1,9 @@
+.build
+.dart_tool
+.packages
+.pub
+.pub-cache
+.git
+.idea
+.vscode
+build

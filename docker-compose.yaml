@@ -4,6 +4,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: chat-backend
+    restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     environment:
@@ -16,9 +17,25 @@ services:
     networks:
       - chat-net
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VRATA_API_BASE_URL: ${VRATA_API_BASE_URL:-http://localhost:8080}
+    container_name: chat-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    networks:
+      - chat-net
+
   kafka:
     image: apache/kafka:4.2.0
     container_name: chat-kafka
+    restart: unless-stopped
     ports:
       - "${KAFKA_PORT:-9092}:9092"
     environment:
@@ -40,6 +57,7 @@ services:
   mongodb:
     image: mongo:7
     container_name: chat-mongodb
+    restart: unless-stopped
     ports:
       - "${MONGO_PORT:-27017}:27017"
     environment:
@@ -52,8 +70,9 @@ services:
       - chat-net
 
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:v0.7.2
     container_name: chat-kafka-ui
+    restart: unless-stopped
     ports:
       - "${KAFKA_UI_PORT:-8081}:8080"
     environment:
