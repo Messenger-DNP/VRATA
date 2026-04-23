@@ -62,7 +62,7 @@ public class MessageService {
 
         return deliveredMessageRepository.findByRoomId(roomId).stream()
                 .filter(message -> roomId.equals(message.roomId()))
-                .map(Message::create)
+                .map(Message::from)
                 .toList();
     }
 

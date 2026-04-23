@@ -1,4 +1,4 @@
-package ru.vrata.backend.integration;
+package ru.vrata.backend.flow;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.docker.compose.enabled=false",
         "spring.kafka.listener.auto-startup=false"
 })
-class ChatMessagingFlowIntegrationTest {
+class ChatMessagingFlowTest {
 
     private static final Pattern NUMBER_PATTERN_TEMPLATE = Pattern.compile("\"%s\"\\s*:\\s*(\\d+)");
     private static final Pattern STRING_PATTERN_TEMPLATE = Pattern.compile("\"%s\"\\s*:\\s*\"([^\"]+)\"");
@@ -181,7 +181,7 @@ class ChatMessagingFlowIntegrationTest {
     }
 
     @TestConfiguration
-    static class IntegrationTestConfig {
+    static class FlowTestConfig {
         @Bean
         InMemoryKafkaOutbox inMemoryKafkaOutbox() {
             return new InMemoryKafkaOutbox();

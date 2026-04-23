@@ -23,7 +23,7 @@ public record Message(UUID id, Long roomId, Long userId, String username, String
         return new Message(UUID.randomUUID(), roomId, userId, username, content);
     }
 
-    public static Message create(KafkaMessage kafkaMessage) {
+    public static Message from(KafkaMessage kafkaMessage) {
         return new Message(UUID.randomUUID(), kafkaMessage.roomId(), kafkaMessage.userId(), kafkaMessage.username(), kafkaMessage.content());
     }
 
