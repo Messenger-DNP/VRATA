@@ -4,8 +4,11 @@ run:
 build:
 	./mvnw clean package
 
-test:
+linux-test:
 	./mvnw test
+
+windows-test:
+	.\mvnw.cmd test
 
 clean:
 	./mvnw clean
