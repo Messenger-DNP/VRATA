@@ -8,4 +8,5 @@ public interface DeliveredMessageRepository {
     void saveForUser(Long userId, KafkaMessage message);
 
     List<KafkaMessage> findByUserId(Long userId);
+    List<KafkaMessage> findByRoomId(Long roomId);
 }
