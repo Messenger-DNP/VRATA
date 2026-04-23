@@ -12,8 +12,10 @@ services:
       SPRING_DATA_MONGODB_URI: ${SPRING_DATA_MONGODB_URI:-mongodb://admin:admin@mongodb:27017/chatdb?authSource=admin}
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:*,http://127.0.0.1:*}
     depends_on:
-      - kafka
-      - mongodb
+      kafka:
+        condition: service_started
+      mongodb:
+        condition: service_healthy
     networks:
       - chat-net
 
@@ -66,6 +68,12 @@ services:
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-chatdb}
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--username", "${MONGO_INITDB_ROOT_USERNAME:-admin}", "--password", "${MONGO_INITDB_ROOT_PASSWORD:-admin}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - chat-net
 
