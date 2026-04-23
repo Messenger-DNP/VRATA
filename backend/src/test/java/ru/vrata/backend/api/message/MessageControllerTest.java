@@ -7,10 +7,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import ru.vrata.backend.api.common.GlobalExceptionHandler;
+import ru.vrata.backend.domain.model.Message;
 import ru.vrata.backend.domain.service.MessageService;
-import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -73,19 +74,21 @@ class MessageControllerTest {
 
     @Test
     void getRoomMessagesShouldReturnMessages() throws Exception {
+        UUID firstId = UUID.randomUUID();
+        UUID secondId = UUID.randomUUID();
         when(messageService.getMessagesForRoom(7L, 42L)).thenReturn(List.of(
-                new KafkaMessage("msg-1", 7L, 42L, "rolan", "hello"),
-                new KafkaMessage("msg-2", 7L, 99L, "teammate", "hi")
+                new Message(firstId, 7L, 42L, "rolan", "hello"),
+                new Message(secondId, 7L, 99L, "teammate", "hi")
         ));
 
         mockMvc.perform(get("/api/v1/rooms/7/messages")
                         .queryParam("userId", "42"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].id").value("msg-1"))
+                .andExpect(jsonPath("$[0].id").value(firstId.toString()))
                 .andExpect(jsonPath("$[0].roomId").value(7))
                 .andExpect(jsonPath("$[0].username").value("rolan"))
-                .andExpect(jsonPath("$[1].id").value("msg-2"))
+                .andExpect(jsonPath("$[1].id").value(secondId.toString()))
                 .andExpect(jsonPath("$[1].username").value("teammate"));
     }
 

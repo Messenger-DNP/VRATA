@@ -1,5 +1,7 @@
 package ru.vrata.backend.domain.model;
 
+import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
+
 import java.util.UUID;
 
 public record Message(UUID id, Long roomId, Long userId, String username, String content) {
@@ -19,6 +21,10 @@ public record Message(UUID id, Long roomId, Long userId, String username, String
 
     public static Message create(Long roomId, Long userId, String username, String content) {
         return new Message(UUID.randomUUID(), roomId, userId, username, content);
+    }
+
+    public static Message create(KafkaMessage kafkaMessage) {
+        return new Message(UUID.randomUUID(), kafkaMessage.roomId(), kafkaMessage.userId(), kafkaMessage.username(), kafkaMessage.content());
     }
 
     public static String normalizeContent(String raw) {

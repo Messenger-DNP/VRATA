@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import ru.vrata.backend.domain.model.ChatRoom;
+import ru.vrata.backend.domain.model.Message;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
 import ru.vrata.backend.domain.repository.DeliveredMessageRepository;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
@@ -70,11 +71,17 @@ class MessageServiceTest {
 
         KafkaMessage first = new KafkaMessage("id-1", 1L, 10L, "user", "hello");
         KafkaMessage second = new KafkaMessage("id-2", 2L, 10L, "user", "world");
-        when(deliveredMessageRepository.findByUserId(10L)).thenReturn(List.of(first, second));
+        when(deliveredMessageRepository.findByRoomId(1L)).thenReturn(List.of(first, second));
 
-        List<KafkaMessage> result = service.getMessagesForRoom(1L, 10L);
+        List<Message> result = service.getMessagesForRoom(1L, 10L);
 
-        assertEquals(List.of(first), result);
+        assertEquals(1, result.size());
+        Message firstResult = result.get(0);
+        assertEquals(1L, firstResult.roomId());
+        assertEquals(10L, firstResult.userId());
+        assertEquals("user", firstResult.username());
+        assertEquals("hello", firstResult.content());
+        assertNotNull(firstResult.id());
     }
 
     @Test
@@ -116,9 +123,9 @@ class MessageServiceTest {
 
         KafkaMessage first = new KafkaMessage("id-1", 2L, 10L, "user", "hello");
         KafkaMessage second = new KafkaMessage("id-2", 3L, 10L, "user", "world");
-        when(deliveredMessageRepository.findByUserId(10L)).thenReturn(List.of(first, second));
+        when(deliveredMessageRepository.findByRoomId(1L)).thenReturn(List.of(first, second));
 
-        List<KafkaMessage> result = service.getMessagesForRoom(1L, 10L);
+        List<Message> result = service.getMessagesForRoom(1L, 10L);
 
         assertTrue(result.isEmpty());
     }
