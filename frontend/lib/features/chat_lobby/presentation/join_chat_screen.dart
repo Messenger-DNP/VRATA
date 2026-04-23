@@ -91,7 +91,6 @@ class _JoinChatScreenState extends ConsumerState<JoinChatScreen> {
                     controller: _inviteCodeController,
                     label: 'Chat code',
                     hintText: 'ABCDEF',
-                    helperText: '6 Latin letters.',
                     enabled: !state.isLoading,
                     textCapitalization: TextCapitalization.characters,
                     textInputAction: TextInputAction.done,
@@ -105,8 +104,9 @@ class _JoinChatScreenState extends ConsumerState<JoinChatScreen> {
                   ],
                   const SizedBox(height: 24),
                   FilledButton.icon(
-                    onPressed:
-                        state.isLoading ? null : () => _submit(controller),
+                    onPressed: state.isLoading
+                        ? null
+                        : () => _submit(controller),
                     icon: state.isLoading
                         ? const SizedBox(
                             width: 20,
@@ -169,10 +169,7 @@ class _InlineFeedback extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.error_outline_rounded,
-            color: theme.colorScheme.error,
-          ),
+          Icon(Icons.error_outline_rounded, color: theme.colorScheme.error),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

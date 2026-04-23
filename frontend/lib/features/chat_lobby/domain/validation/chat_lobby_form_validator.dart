@@ -7,8 +7,8 @@ enum ChatLobbyValidationError {
 }
 
 abstract final class ChatLobbyFormValidator {
-  static const int minChatNameLength = 3;
-  static const int maxChatNameLength = 100;
+  static const int minChatNameLength = 1;
+  static const int maxChatNameLength = 50;
 
   static final RegExp _inviteCodePattern = RegExp(r'^[A-Za-z]{6}$');
 

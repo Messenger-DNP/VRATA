@@ -25,4 +25,9 @@ public class InMemoryDeliveredMessageRepository implements DeliveredMessageRepos
     public List<KafkaMessage> findByUserId(Long userId) {
         return List.copyOf(inboxByUserId.getOrDefault(userId, List.of()));
     }
+
+    @Override
+    public List<KafkaMessage> findByRoomId(Long roomId) {
+        return List.copyOf(inboxByUserId.getOrDefault(roomId, List.of()));
+    }
 }
