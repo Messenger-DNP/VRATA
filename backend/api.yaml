@@ -426,3 +426,17 @@ x-kafka-integration:
       owner: chat-consumer-service
       responsibility: subscribe and react to AuthEvent payload
     payloadSchema: '#/components/schemas/AuthEvent'
+
+x-websocket-integration:
+  liveMessages:
+    protocol: STOMP over SockJS
+    endpoint: /ws
+    brokerPrefix: /topic
+    subscriptions:
+      roomMessages:
+        destinationTemplate: /topic/rooms/{roomId}/messages
+        payloadSchema: '#/components/schemas/MessageResponse'
+    flow:
+      history: Load existing room messages with GET /api/v1/rooms/{roomId}/messages?userId={userId}.
+      send: Send messages with POST /api/v1/messages.
+      live: Subscribe to the room topic to receive new messages after Kafka delivery.
