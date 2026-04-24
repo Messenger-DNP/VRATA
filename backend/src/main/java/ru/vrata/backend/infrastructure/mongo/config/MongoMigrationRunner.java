@@ -2,6 +2,7 @@ package ru.vrata.backend.infrastructure.mongo.config;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,7 @@ import java.util.Comparator;
 import java.util.List;
 
 @Component
+@ConditionalOnProperty(prefix = "app.mongo.migrations", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class MongoMigrationRunner implements ApplicationRunner {
     private final MongoTemplate mongoTemplate;
     private final List<MongoMigration> migrations;
@@ -53,6 +55,5 @@ public class MongoMigrationRunner implements ApplicationRunner {
         ));
     }
 }
-
 
 
