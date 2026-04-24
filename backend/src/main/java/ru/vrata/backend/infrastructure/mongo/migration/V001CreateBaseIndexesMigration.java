@@ -20,9 +20,6 @@ public class V001CreateBaseIndexesMigration implements MongoMigration {
         createCollectionIfMissing(mongoTemplate, "messages");
 
         mongoTemplate.indexOps("users")
-                .ensureIndex(new Index().on("userId", Sort.Direction.ASC).unique());
-
-        mongoTemplate.indexOps("users")
                 .ensureIndex(new Index().on("username", Sort.Direction.ASC).unique());
 
         mongoTemplate.indexOps("chatrooms")
