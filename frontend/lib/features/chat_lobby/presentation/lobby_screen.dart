@@ -11,6 +11,7 @@ class LobbyScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final session = ref.watch(authSessionProvider);
+    const contentPadding = EdgeInsets.fromLTRB(20, 24, 20, 28);
 
     return Scaffold(
       appBar: AppBar(
@@ -18,52 +19,66 @@ class LobbyScreen extends ConsumerWidget {
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Where should we begin?',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final minHeight = constraints.maxHeight > contentPadding.vertical
+                ? constraints.maxHeight - contentPadding.vertical
+                : 0.0;
+
+            return ListView(
+              padding: contentPadding,
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: minHeight),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Where should we begin?',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Signed in as ${session?.username ?? 'guest'}.\nChoose an action to start chatting in a shared space.',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurface.withAlpha(160),
+                              height: 1.45,
+                            ),
+                          ),
+                          const SizedBox(height: 42),
+                          _LobbyActionCard(
+                            icon: Icons.add_rounded,
+                            title: 'Create chat',
+                            description:
+                                'Start a new room and invite participants into a shared workspace.',
+                            buttonLabel: 'Start',
+                            onPressed: () => context.go(AppRoutes.createChat),
+                          ),
+                          const SizedBox(height: 18),
+                          _LobbyActionCard(
+                            icon: Icons.group_add_rounded,
+                            title: 'Join chat',
+                            description:
+                                'Enter an invite code to join an existing conversation.',
+                            buttonLabel: 'Enter',
+                            onPressed: () => context.go(AppRoutes.joinChat),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Signed in as ${session?.username ?? 'guest'}.\nChoose an action to start chatting in a shared space.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurface.withAlpha(160),
-                      height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 42),
-                  _LobbyActionCard(
-                    icon: Icons.add_rounded,
-                    title: 'Create chat',
-                    description:
-                        'Start a new room and invite participants into a shared workspace.',
-                    buttonLabel: 'Start',
-                    onPressed: () => context.go(AppRoutes.createChat),
-                  ),
-                  const SizedBox(height: 18),
-                  _LobbyActionCard(
-                    icon: Icons.group_add_rounded,
-                    title: 'Join chat',
-                    description:
-                        'Enter an invite code to join an existing conversation.',
-                    buttonLabel: 'Enter',
-                    onPressed: () => context.go(AppRoutes.joinChat),
-                  ),
-                ],
-              ),
-            ),
-          ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
