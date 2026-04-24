@@ -11,6 +11,7 @@ class AuthFlowScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const contentPadding = EdgeInsets.all(20);
 
     return Scaffold(
       body: DecoratedBox(
@@ -43,14 +44,28 @@ class AuthFlowScaffold extends StatelessWidget {
               ),
             ),
             SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 460),
-                    child: child,
-                  ),
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final minHeight =
+                      constraints.maxHeight > contentPadding.vertical
+                          ? constraints.maxHeight - contentPadding.vertical
+                          : 0.0;
+
+                  return ListView(
+                    padding: contentPadding,
+                    children: [
+                      ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: minHeight),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 460),
+                            child: child,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
