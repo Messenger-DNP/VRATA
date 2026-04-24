@@ -15,3 +15,7 @@ spring:
 
   mongodb:
     uri: ${SPRING_MONGODB_URI:mongodb://localhost:27017/chatdb}
+
+app:
+  kafka:
+    chat-topic-pattern: chat-room-.*
