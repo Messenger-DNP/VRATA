@@ -2,7 +2,6 @@ package ru.vrata.backend.domain.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.vrata.backend.api.message.dto.MessageResponse;
 import ru.vrata.backend.domain.model.Message;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
 import ru.vrata.backend.domain.repository.DeliveredMessageRepository;
@@ -52,6 +51,7 @@ public class MessageService {
 
     public List<Message> getMessagesForRoom(Long roomId,  Long userId) {
         validateRoomId(roomId);
+        validateUserId(userId);
 
         chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("Room not found"));
@@ -60,7 +60,7 @@ public class MessageService {
             throw new IllegalArgumentException("User is not in the room");
         }
 
-        return deliveredMessageRepository.findByRoomId(roomId).stream()
+        return deliveredMessageRepository.findByUserId(userId).stream()
                 .filter(message -> roomId.equals(message.roomId()))
                 .map(Message::from)
                 .toList();

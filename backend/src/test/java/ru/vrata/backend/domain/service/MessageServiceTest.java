@@ -71,7 +71,7 @@ class MessageServiceTest {
 
         KafkaMessage first = new KafkaMessage("id-1", 1L, 10L, "user", "hello");
         KafkaMessage second = new KafkaMessage("id-2", 2L, 10L, "user", "world");
-        when(deliveredMessageRepository.findByRoomId(1L)).thenReturn(List.of(first, second));
+        when(deliveredMessageRepository.findByUserId(10L)).thenReturn(List.of(first, second));
 
         List<Message> result = service.getMessagesForRoom(1L, 10L);
 
@@ -123,7 +123,7 @@ class MessageServiceTest {
 
         KafkaMessage first = new KafkaMessage("id-1", 2L, 10L, "user", "hello");
         KafkaMessage second = new KafkaMessage("id-2", 3L, 10L, "user", "world");
-        when(deliveredMessageRepository.findByRoomId(1L)).thenReturn(List.of(first, second));
+        when(deliveredMessageRepository.findByUserId(10L)).thenReturn(List.of(first, second));
 
         List<Message> result = service.getMessagesForRoom(1L, 10L);
 
