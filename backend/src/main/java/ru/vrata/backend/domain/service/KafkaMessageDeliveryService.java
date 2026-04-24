@@ -18,12 +18,15 @@ public class KafkaMessageDeliveryService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final DeliveredMessageRepository deliveredMessageRepository;
+    private final MessageRealtimePublisher messageRealtimePublisher;
 
     public KafkaMessageDeliveryService(ChatRoomRepository chatRoomRepository,
-                                       DeliveredMessageRepository deliveredMessageRepository)
+                                       DeliveredMessageRepository deliveredMessageRepository,
+                                       MessageRealtimePublisher messageRealtimePublisher)
     {
         this.chatRoomRepository = chatRoomRepository;
         this.deliveredMessageRepository = deliveredMessageRepository;
+        this.messageRealtimePublisher = messageRealtimePublisher;
     }
 
     /**
@@ -52,6 +55,15 @@ public class KafkaMessageDeliveryService {
                 memberIds.size()
         );
 
+        if (memberIds.isEmpty()) {
+            log.info(
+                    "Delivery skipped because room has no members: messageId={}, roomId={}",
+                    message.id(),
+                    message.roomId()
+            );
+            return;
+        }
+
         for (Long memberId : memberIds) {
             deliveredMessageRepository.saveForUser(memberId, message);
             log.info(
@@ -63,6 +75,8 @@ public class KafkaMessageDeliveryService {
 
 
         }
+
+        messageRealtimePublisher.publish(message);
 
         log.info(
                 "Delivery completed: messageId={}, roomId={}",
