@@ -52,6 +52,7 @@ public class MessageService {
 
     public List<Message> getMessagesForRoom(Long roomId,  Long userId) {
         validateRoomId(roomId);
+        validateUserId(userId);
 
         chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("Room not found"));
@@ -60,7 +61,7 @@ public class MessageService {
             throw new IllegalArgumentException("User is not in the room");
         }
 
-        return deliveredMessageRepository.findByRoomId(roomId).stream()
+        return deliveredMessageRepository.findByUserId(userId).stream()
                 .filter(message -> roomId.equals(message.roomId()))
                 .map(Message::from)
                 .toList();
