@@ -14,4 +14,4 @@ spring:
         spring.json.value.default.type: ru.vrata.backend.infrastructure.kafka.KafkaMessage
 
   mongodb:
-    uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/chatdb}
+    uri: ${SPRING_MONGODB_URI:mongodb://localhost:27017/chatdb}
