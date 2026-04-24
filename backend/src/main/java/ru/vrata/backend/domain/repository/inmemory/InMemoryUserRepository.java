@@ -1,5 +1,6 @@
 package ru.vrata.backend.domain.repository.inmemory;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 import ru.vrata.backend.domain.model.User;
 import ru.vrata.backend.domain.repository.UserRepository;
@@ -9,6 +10,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
+@ConditionalOnProperty(name = "app.repository", havingValue = "inmemory")
 public class InMemoryUserRepository implements UserRepository {
     private final Map<Long, User> usersById = new ConcurrentHashMap<>();
     private final Map<String, User> usersByUsername = new ConcurrentHashMap<>();

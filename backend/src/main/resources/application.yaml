@@ -19,3 +19,4 @@ spring:
 app:
   kafka:
     chat-topic-pattern: chat-room-.*
+  repository: mongo
