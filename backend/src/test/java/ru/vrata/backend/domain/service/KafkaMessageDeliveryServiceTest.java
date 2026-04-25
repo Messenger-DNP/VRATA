@@ -22,13 +22,19 @@ class KafkaMessageDeliveryServiceTest {
 
     private ChatRoomRepository chatRoomRepository;
     private InMemoryDeliveredMessageRepository deliveredMessageRepository;
+    private MessageRealtimePublisher messageRealtimePublisher;
     private KafkaMessageDeliveryService deliveryService;
 
     @BeforeEach
     void setUp() {
         chatRoomRepository = Mockito.mock(ChatRoomRepository.class);
         deliveredMessageRepository = new InMemoryDeliveredMessageRepository();
-        deliveryService = new KafkaMessageDeliveryService(chatRoomRepository, deliveredMessageRepository);
+        messageRealtimePublisher = Mockito.mock(MessageRealtimePublisher.class);
+        deliveryService = new KafkaMessageDeliveryService(
+                chatRoomRepository,
+                deliveredMessageRepository,
+                messageRealtimePublisher
+        );
     }
 
     @Test
@@ -47,6 +53,7 @@ class KafkaMessageDeliveryServiceTest {
 
         verify(chatRoomRepository, times(1)).findById(1L);
         verify(chatRoomRepository, never()).findMemberIdsByRoomId(Mockito.anyLong());
+        verify(messageRealtimePublisher, never()).publish(Mockito.any());
 
         assertTrue(deliveredMessageRepository.findByUserId(10L).isEmpty());
         assertTrue(deliveredMessageRepository.findByUserId(20L).isEmpty());
@@ -77,6 +84,7 @@ class KafkaMessageDeliveryServiceTest {
         assertEquals(message, deliveredMessageRepository.findByUserId(10L).get(0));
         assertEquals(message, deliveredMessageRepository.findByUserId(20L).get(0));
         assertTrue(deliveredMessageRepository.findByUserId(30L).isEmpty());
+        verify(messageRealtimePublisher, times(1)).publish(message);
     }
 
     @Test
@@ -101,5 +109,6 @@ class KafkaMessageDeliveryServiceTest {
 
         assertTrue(deliveredMessageRepository.findByUserId(10L).isEmpty());
         assertTrue(deliveredMessageRepository.findByUserId(20L).isEmpty());
+        verify(messageRealtimePublisher, never()).publish(Mockito.any());
     }
 }
