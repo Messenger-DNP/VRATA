@@ -36,11 +36,17 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConsumerFactory<String, KafkaMessage> consumerFactory(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
+    public ConsumerFactory<String, KafkaMessage> consumerFactory(
+            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
+            @Value("${spring.kafka.consumer.auto-offset-reset:earliest}") String autoOffsetReset,
+            @Value("${spring.kafka.consumer.properties.metadata.max.age.ms:5000}") Integer metadataMaxAgeMs
+    ) {
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetReset);
+        config.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, metadataMaxAgeMs);
         config.put(JsonDeserializer.TRUSTED_PACKAGES, "ru.vrata.backend.infrastructure.kafka");
         config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, KafkaMessage.class);
         return new DefaultKafkaConsumerFactory<>(config);
