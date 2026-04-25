@@ -176,18 +176,11 @@ paths:
   /api/v1/rooms/{roomId}/messages:
     get:
       tags: [Messages]
-      summary: Get delivered messages for user in room
+      summary: Get room messages
       operationId: getRoomMessages
       parameters:
         - name: roomId
           in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-        - name: userId
-          in: query
           required: true
           schema:
             type: integer
@@ -379,7 +372,7 @@ components:
 
     MessageResponse:
       type: object
-      required: [id, roomId, userId, username, content]
+      required: [id, roomId, userId, username, content, timestamp]
       properties:
         id:
           type: string
@@ -398,6 +391,10 @@ components:
         content:
           type: string
           example: Hello team
+        timestamp:
+          type: string
+          format: date-time
+          example: 2026-04-25T08:00:00Z
 
     AuthEvent:
       type: object
@@ -456,8 +453,9 @@ x-websocket-integration:
           userId: 42
           username: rolan
           content: Hello team
+          timestamp: 2026-04-25T08:00:00Z
     flow:
-      history: Load existing room messages with GET /api/v1/rooms/{roomId}/messages?userId={userId}.
+      history: Load existing room messages with GET /api/v1/rooms/{roomId}/messages.
       send: Send messages with POST /api/v1/messages.
       live: Subscribe to the room topic to receive new messages after Kafka delivery.
     notes:

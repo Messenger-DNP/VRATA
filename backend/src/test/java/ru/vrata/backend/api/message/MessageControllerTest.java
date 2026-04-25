@@ -10,6 +10,7 @@ import ru.vrata.backend.api.common.GlobalExceptionHandler;
 import ru.vrata.backend.domain.model.Message;
 import ru.vrata.backend.domain.service.MessageService;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -76,31 +77,33 @@ class MessageControllerTest {
     void getRoomMessagesShouldReturnMessages() throws Exception {
         UUID firstId = UUID.randomUUID();
         UUID secondId = UUID.randomUUID();
-        when(messageService.getMessagesForRoom(7L, 42L)).thenReturn(List.of(
-                new Message(firstId, 7L, 42L, "rolan", "hello"),
-                new Message(secondId, 7L, 99L, "teammate", "hi")
+        Instant firstTimestamp = Instant.parse("2026-04-25T08:00:00Z");
+        Instant secondTimestamp = Instant.parse("2026-04-25T08:01:00Z");
+        when(messageService.getMessagesForRoom(7L)).thenReturn(List.of(
+                new Message(firstId, 7L, 42L, "rolan", "hello", firstTimestamp),
+                new Message(secondId, 7L, 99L, "teammate", "hi", secondTimestamp)
         ));
 
-        mockMvc.perform(get("/api/v1/rooms/7/messages")
-                        .queryParam("userId", "42"))
+        mockMvc.perform(get("/api/v1/rooms/7/messages"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].id").value(firstId.toString()))
                 .andExpect(jsonPath("$[0].roomId").value(7))
                 .andExpect(jsonPath("$[0].username").value("rolan"))
+                .andExpect(jsonPath("$[0].timestamp").value(firstTimestamp.toString()))
                 .andExpect(jsonPath("$[1].id").value(secondId.toString()))
-                .andExpect(jsonPath("$[1].username").value("teammate"));
+                .andExpect(jsonPath("$[1].username").value("teammate"))
+                .andExpect(jsonPath("$[1].timestamp").value(secondTimestamp.toString()));
     }
 
     @Test
-    void getRoomMessagesShouldPassRoomAndUserToService() throws Exception {
-        when(messageService.getMessagesForRoom(7L, 42L)).thenReturn(List.of());
+    void getRoomMessagesShouldPassRoomToService() throws Exception {
+        when(messageService.getMessagesForRoom(7L)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/v1/rooms/7/messages")
-                        .queryParam("userId", "42"))
+        mockMvc.perform(get("/api/v1/rooms/7/messages"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        verify(messageService).getMessagesForRoom(7L, 42L);
+        verify(messageService).getMessagesForRoom(7L);
     }
 }

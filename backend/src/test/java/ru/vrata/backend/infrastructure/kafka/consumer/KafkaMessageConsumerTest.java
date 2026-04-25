@@ -6,6 +6,8 @@ import org.mockito.Mockito;
 import ru.vrata.backend.domain.service.KafkaMessageDeliveryService;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
+import java.time.Instant;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -29,7 +31,8 @@ class KafkaMessageConsumerTest {
                 1L,
                 10L,
                 "riia",
-                "hello"
+                "hello",
+                Instant.parse("2026-04-25T08:00:00Z")
         );
 
         assertDoesNotThrow(() -> consumer.consume(message));
@@ -51,7 +54,8 @@ class KafkaMessageConsumerTest {
                 1L,
                 10L,
                 "riia",
-                "hello"
+                "hello",
+                Instant.parse("2026-04-25T08:00:00Z")
         );
 
         assertDoesNotThrow(() -> consumer.consume(message));
@@ -66,7 +70,8 @@ class KafkaMessageConsumerTest {
                 1L,
                 10L,
                 "   ",
-                "hello"
+                "hello",
+                Instant.parse("2026-04-25T08:00:00Z")
         );
 
         assertDoesNotThrow(() -> consumer.consume(message));
@@ -81,7 +86,24 @@ class KafkaMessageConsumerTest {
                 1L,
                 10L,
                 "riia",
-                "   "
+                "   ",
+                Instant.parse("2026-04-25T08:00:00Z")
+        );
+
+        assertDoesNotThrow(() -> consumer.consume(message));
+
+        verify(deliveryService, never()).deliver(Mockito.any());
+    }
+
+    @Test
+    void consumeShouldIgnoreMessageWithNullTimestampWithoutException() {
+        KafkaMessage message = new KafkaMessage(
+                "msg-4",
+                1L,
+                10L,
+                "riia",
+                "hello",
+                null
         );
 
         assertDoesNotThrow(() -> consumer.consume(message));

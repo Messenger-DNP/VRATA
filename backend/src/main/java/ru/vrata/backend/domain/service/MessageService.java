@@ -2,10 +2,9 @@ package ru.vrata.backend.domain.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.vrata.backend.api.message.dto.MessageResponse;
 import ru.vrata.backend.domain.model.Message;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
-import ru.vrata.backend.domain.repository.DeliveredMessageRepository;
+import ru.vrata.backend.domain.repository.RoomMessageRepository;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 import ru.vrata.backend.infrastructure.kafka.producer.KafkaProducer;
 
@@ -15,15 +14,15 @@ import java.util.List;
 @Slf4j
 public class MessageService {
     private final ChatRoomRepository chatRoomRepository;
-    private final DeliveredMessageRepository deliveredMessageRepository;
+    private final RoomMessageRepository roomMessageRepository;
     private final KafkaProducer kafkaProducer;
 
     public MessageService(ChatRoomRepository chatRoomRepository,
-                          DeliveredMessageRepository deliveredMessageRepository,
+                          RoomMessageRepository roomMessageRepository,
                           KafkaProducer kafkaProducer)
     {
         this.chatRoomRepository = chatRoomRepository;
-        this.deliveredMessageRepository = deliveredMessageRepository;
+        this.roomMessageRepository = roomMessageRepository;
         this.kafkaProducer = kafkaProducer;
     }
 
@@ -45,32 +44,22 @@ public class MessageService {
                 message.roomId(),
                 message.userId(),
                 message.username(),
-                message.content()
+                message.content(),
+                message.timestamp()
         );
         kafkaProducer.produce(kafkaMessage);
     }
 
-    public List<Message> getMessagesForRoom(Long roomId,  Long userId) {
+    public List<Message> getMessagesForRoom(Long roomId) {
         validateRoomId(roomId);
-        validateUserId(userId);
 
         chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("Room not found"));
 
-        if (!chatRoomRepository.isUserInRoom(roomId, userId)) {
-            throw new IllegalArgumentException("User is not in the room");
-        }
-
-        return deliveredMessageRepository.findByUserId(userId).stream()
-                .filter(message -> roomId.equals(message.roomId()))
+        return roomMessageRepository.findByRoomId(roomId).stream()
                 .map(Message::from)
+                .sorted((left, right) -> left.timestamp().compareTo(right.timestamp()))
                 .toList();
-    }
-
-    private void validateUserId(Long userId) {
-        if (userId == null || userId <= 0) {
-            throw new IllegalArgumentException("user id must be positive");
-        }
     }
 
     private void validateRoomId(Long roomId) {

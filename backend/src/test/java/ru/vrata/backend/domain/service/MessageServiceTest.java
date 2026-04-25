@@ -6,10 +6,11 @@ import org.mockito.ArgumentCaptor;
 import ru.vrata.backend.domain.model.ChatRoom;
 import ru.vrata.backend.domain.model.Message;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
-import ru.vrata.backend.domain.repository.DeliveredMessageRepository;
+import ru.vrata.backend.domain.repository.RoomMessageRepository;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 import ru.vrata.backend.infrastructure.kafka.producer.KafkaProducer;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,16 +20,16 @@ import static org.mockito.Mockito.*;
 class MessageServiceTest {
 
     private ChatRoomRepository chatRoomRepository;
-    private DeliveredMessageRepository deliveredMessageRepository;
+    private RoomMessageRepository roomMessageRepository;
     private KafkaProducer kafkaProducer;
     private MessageService service;
 
     @BeforeEach
     void setUp() {
         chatRoomRepository = mock(ChatRoomRepository.class);
-        deliveredMessageRepository = mock(DeliveredMessageRepository.class);
+        roomMessageRepository = mock(RoomMessageRepository.class);
         kafkaProducer = mock(KafkaProducer.class);
-        service = new MessageService(chatRoomRepository, deliveredMessageRepository, kafkaProducer);
+        service = new MessageService(chatRoomRepository, roomMessageRepository, kafkaProducer);
     }
 
     @Test
@@ -44,6 +45,7 @@ class MessageServiceTest {
         assertEquals(10L, sentMessage.userId());
         assertEquals("username", sentMessage.username());
         assertEquals("test", sentMessage.content());
+        assertNotNull(sentMessage.timestamp());
         assertNotNull(sentMessage.id());
     }
 
@@ -64,23 +66,24 @@ class MessageServiceTest {
     }
 
     @Test
-    void getMessagesForRoomShouldReturnMessagesForRoomWhenUserInRoom() {
+    void getMessagesForRoomShouldReturnMessagesForRoom() {
         ChatRoom room = ChatRoom.create(1L, "test-room");
         when(chatRoomRepository.findById(1L)).thenReturn(Optional.of(room));
-        when(chatRoomRepository.isUserInRoom(1L, 10L)).thenReturn(true);
+        Instant firstTimestamp = Instant.parse("2026-04-25T08:00:00Z");
+        Instant secondTimestamp = Instant.parse("2026-04-25T08:01:00Z");
+        KafkaMessage first = new KafkaMessage("id-1", 1L, 10L, "user", "hello", firstTimestamp);
+        KafkaMessage second = new KafkaMessage("id-2", 2L, 10L, "user", "world", secondTimestamp);
+        when(roomMessageRepository.findByRoomId(1L)).thenReturn(List.of(first, second));
 
-        KafkaMessage first = new KafkaMessage("id-1", 1L, 10L, "user", "hello");
-        KafkaMessage second = new KafkaMessage("id-2", 2L, 10L, "user", "world");
-        when(deliveredMessageRepository.findByUserId(10L)).thenReturn(List.of(first, second));
+        List<Message> result = service.getMessagesForRoom(1L);
 
-        List<Message> result = service.getMessagesForRoom(1L, 10L);
-
-        assertEquals(1, result.size());
+        assertEquals(2, result.size());
         Message firstResult = result.get(0);
         assertEquals(1L, firstResult.roomId());
         assertEquals(10L, firstResult.userId());
         assertEquals("user", firstResult.username());
         assertEquals("hello", firstResult.content());
+        assertEquals(firstTimestamp, firstResult.timestamp());
         assertNotNull(firstResult.id());
     }
 
@@ -88,44 +91,23 @@ class MessageServiceTest {
     void getMessagesForRoomShouldThrowIfRoomNotFound() {
         when(chatRoomRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> service.getMessagesForRoom(1L, 10L));
-        verify(chatRoomRepository, never()).isUserInRoom(anyLong(), anyLong());
-        verifyNoInteractions(deliveredMessageRepository);
-    }
-
-    @Test
-    void getMessagesForRoomShouldThrowIfUserNotInRoom() {
-        ChatRoom room = ChatRoom.create(1L, "test-room");
-        when(chatRoomRepository.findById(1L)).thenReturn(Optional.of(room));
-        when(chatRoomRepository.isUserInRoom(1L, 10L)).thenReturn(false);
-
-        assertThrows(IllegalArgumentException.class, () -> service.getMessagesForRoom(1L, 10L));
-        verifyNoInteractions(deliveredMessageRepository);
-    }
-
-    @Test
-    void getMessagesForRoomShouldThrowIfUserIdInvalid() {
-        assertThrows(IllegalArgumentException.class, () -> service.getMessagesForRoom(1L, 0L));
-        verifyNoInteractions(deliveredMessageRepository);
+        assertThrows(IllegalArgumentException.class, () -> service.getMessagesForRoom(1L));
+        verifyNoInteractions(roomMessageRepository);
     }
 
     @Test
     void getMessagesForRoomShouldThrowIfRoomIdInvalid() {
-        assertThrows(IllegalArgumentException.class, () -> service.getMessagesForRoom(0L, 10L));
-        verifyNoInteractions(deliveredMessageRepository);
+        assertThrows(IllegalArgumentException.class, () -> service.getMessagesForRoom(0L));
+        verifyNoInteractions(roomMessageRepository);
     }
 
     @Test
     void getMessagesForRoomShouldReturnEmptyWhenNoMessagesInRoom() {
         ChatRoom room = ChatRoom.create(1L, "test-room");
         when(chatRoomRepository.findById(1L)).thenReturn(Optional.of(room));
-        when(chatRoomRepository.isUserInRoom(1L, 10L)).thenReturn(true);
+        when(roomMessageRepository.findByRoomId(1L)).thenReturn(List.of());
 
-        KafkaMessage first = new KafkaMessage("id-1", 2L, 10L, "user", "hello");
-        KafkaMessage second = new KafkaMessage("id-2", 3L, 10L, "user", "world");
-        when(deliveredMessageRepository.findByUserId(10L)).thenReturn(List.of(first, second));
-
-        List<Message> result = service.getMessagesForRoom(1L, 10L);
+        List<Message> result = service.getMessagesForRoom(1L);
 
         assertTrue(result.isEmpty());
     }

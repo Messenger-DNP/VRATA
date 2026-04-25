@@ -5,6 +5,7 @@ import ru.vrata.backend.domain.repository.DeliveredMessageRepository;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +29,18 @@ public class InMemoryDeliveredMessageRepository implements DeliveredMessageRepos
 
     @Override
     public List<KafkaMessage> findByRoomId(Long roomId) {
-        return List.copyOf(inboxByUserId.getOrDefault(roomId, List.of()));
+        if (roomId == null) {
+            return List.of();
+        }
+
+        Map<String, KafkaMessage> byMessageId = new LinkedHashMap<>();
+        for (List<KafkaMessage> userInbox : inboxByUserId.values()) {
+            for (KafkaMessage message : userInbox) {
+                if (roomId.equals(message.roomId())) {
+                    byMessageId.putIfAbsent(message.id(), message);
+                }
+            }
+        }
+        return List.copyOf(byMessageId.values());
     }
 }
