@@ -22,6 +22,8 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  bool _isLeaveConfirmationOpen = false;
+  bool _isLeavingRoom = false;
 
   @override
   void dispose() {
@@ -48,14 +50,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final title = widget.room?.name ?? 'Chat #${widget.chatId}';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        leading: IconButton(
-          onPressed: () => context.go(AppRoutes.lobby),
-          tooltip: 'Lobby',
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
-      ),
+      appBar: AppBar(title: Text(title)),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -69,9 +64,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     title: title,
                     username: session?.username,
                     inviteCode: widget.room?.inviteCode,
+                    isLeavingRoom: _isLeaveConfirmationOpen || _isLeavingRoom,
                     onCopyInviteCode: widget.room == null
                         ? null
                         : () => _copyInviteCode(widget.room!.inviteCode),
+                    onLeaveRoom: _showLeaveRoomConfirmation,
                   ),
                   const SizedBox(height: 12),
                   Expanded(
@@ -124,6 +121,64 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ..showSnackBar(const SnackBar(content: Text('Invite code copied.')));
   }
 
+  Future<void> _showLeaveRoomConfirmation() async {
+    if (_isLeaveConfirmationOpen || _isLeavingRoom) {
+      return;
+    }
+
+    setState(() {
+      _isLeaveConfirmationOpen = true;
+    });
+
+    final shouldLeave = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Leave room?'),
+          content: const Text(
+            'If you leave this room, you will be able to join it again only by invite code. Make sure you saved the room invite code.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Leave'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isLeaveConfirmationOpen = false;
+    });
+
+    if (shouldLeave ?? false) {
+      _leaveRoom();
+    }
+  }
+
+  void _leaveRoom() {
+    if (_isLeavingRoom) {
+      return;
+    }
+
+    setState(() {
+      _isLeavingRoom = true;
+    });
+    context.go(AppRoutes.lobby);
+  }
+
   bool _isNearBottom() {
     if (!_scrollController.hasClients) {
       return true;
@@ -153,13 +208,17 @@ class _ChatHeader extends StatelessWidget {
     required this.title,
     required this.username,
     required this.inviteCode,
+    required this.isLeavingRoom,
     required this.onCopyInviteCode,
+    required this.onLeaveRoom,
   });
 
   final String title;
   final String? username;
   final String? inviteCode;
+  final bool isLeavingRoom;
   final VoidCallback? onCopyInviteCode;
+  final VoidCallback onLeaveRoom;
 
   @override
   Widget build(BuildContext context) {
@@ -215,6 +274,16 @@ class _ChatHeader extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: isLeavingRoom ? null : onLeaveRoom,
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.error,
+              disabledForegroundColor: theme.colorScheme.error.withAlpha(110),
+            ),
+            icon: const Icon(Icons.logout_rounded),
+            label: const Text('Leave room'),
+          ),
         ],
       ),
     );
@@ -299,10 +368,7 @@ class _MessagesPanel extends StatelessWidget {
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({
-    required this.message,
-    required this.isMine,
-  });
+  const _MessageBubble({required this.message, required this.isMine});
 
   final ChatMessage message;
   final bool isMine;
@@ -313,8 +379,9 @@ class _MessageBubble extends StatelessWidget {
     final backgroundColor = isMine
         ? theme.colorScheme.primary
         : theme.colorScheme.onSurface.withAlpha(14);
-    final foregroundColor =
-        isMine ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
+    final foregroundColor = isMine
+        ? theme.colorScheme.onPrimary
+        : theme.colorScheme.onSurface;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -439,10 +506,7 @@ class _MessageComposer extends StatelessWidget {
 }
 
 class _InlineStatus extends StatelessWidget {
-  const _InlineStatus({
-    required this.message,
-    this.isError = false,
-  });
+  const _InlineStatus({required this.message, this.isError = false});
 
   final String message;
   final bool isError;
@@ -538,10 +602,7 @@ class _PanelState extends StatelessWidget {
                 height: 1.35,
               ),
             ),
-            if (action != null) ...[
-              const SizedBox(height: 12),
-              action!,
-            ],
+            if (action != null) ...[const SizedBox(height: 12), action!],
           ],
         ),
       ),
