@@ -15,10 +15,16 @@ final chatMessagesControllerProvider = AutoDisposeNotifierProviderFamily<
 class ChatMessagesController
     extends AutoDisposeFamilyNotifier<ChatMessagesState, int> {
   static const int maxMessageLength = 2000;
+  static const int _maxLiveReconnectAttempts = 3;
+  static const Duration _liveReconnectDelay = Duration(seconds: 2);
 
   late int _roomId;
-  Timer? _pollingTimer;
+  StreamSubscription<ChatMessage>? _liveMessagesSubscription;
   Future<void>? _messagesRequest;
+  Timer? _liveReconnectTimer;
+  int _liveGeneration = 0;
+  int _failedLiveGeneration = -1;
+  int _liveReconnectAttempts = 0;
   bool _isDisposed = false;
 
   @override
@@ -26,7 +32,8 @@ class ChatMessagesController
     _roomId = roomId;
     ref.onDispose(() {
       _isDisposed = true;
-      _pollingTimer?.cancel();
+      _liveReconnectTimer?.cancel();
+      unawaited(_liveMessagesSubscription?.cancel());
     });
 
     unawaited(Future<void>.microtask(_open));
@@ -91,11 +98,6 @@ class ChatMessagesController
         return false;
       }
 
-      await _refreshMessagesAfterActiveRequest();
-      if (_isDisposed) {
-        return false;
-      }
-
       state = state.copyWith(isSending: false, sendErrorMessage: null);
       return true;
     } on ChatMessageFailureException catch (exception) {
@@ -118,26 +120,24 @@ class ChatMessagesController
   }
 
   Future<void> _open() async {
-    await refreshMessages();
-
     if (_isDisposed || ref.read(authSessionProvider) == null) {
+      await refreshMessages();
       return;
     }
 
-    _startPolling();
-  }
+    final liveReady = _startLiveMessages();
+    final liveReadySucceeded =
+        liveReady.then((_) => true).catchError((Object _) => false);
 
-  Future<void> _refreshMessagesAfterActiveRequest() async {
-    final activeRequest = _messagesRequest;
-    if (activeRequest != null) {
-      await activeRequest;
-    }
+    await refreshMessages();
 
     if (_isDisposed) {
       return;
     }
 
-    await refreshMessages();
+    if (await liveReadySucceeded && !_isDisposed) {
+      await refreshMessages();
+    }
   }
 
   Future<void> _refreshMessagesInternal() async {
@@ -152,7 +152,7 @@ class ChatMessagesController
       return;
     }
 
-    if (state.messages.isEmpty) {
+    if (state.messages.isEmpty && !state.isReady) {
       state = state.copyWith(
         status: ChatMessagesLoadStatus.loading,
         errorMessage: null,
@@ -185,12 +185,85 @@ class ChatMessagesController
     }
   }
 
-  void _startPolling() {
-    _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(
-      ref.read(chatMessagesPollingIntervalProvider),
-      (_) => unawaited(refreshMessages()),
+  Future<void> _startLiveMessages() {
+    _liveReconnectTimer?.cancel();
+    _liveReconnectTimer = null;
+    final generation = ++_liveGeneration;
+    unawaited(_liveMessagesSubscription?.cancel());
+    final observation =
+        ref.read(observeChatMessagesUseCaseProvider).call(roomId: _roomId);
+
+    _liveMessagesSubscription = observation.messages.listen(
+      (message) => _handleLiveMessage(message, generation),
+      onError: (Object error) {
+        _handleLiveError(error, generation);
+      },
     );
+
+    return observation.ready.then((_) {
+      if (_isDisposed || generation != _liveGeneration) {
+        return;
+      }
+
+      _failedLiveGeneration = -1;
+      _liveReconnectAttempts = 0;
+    }).catchError((Object error, StackTrace stackTrace) {
+      _handleLiveError(error, generation);
+      Error.throwWithStackTrace(error, stackTrace);
+    });
+  }
+
+  void _handleLiveMessage(ChatMessage message, int generation) {
+    if (_isDisposed ||
+        generation != _liveGeneration ||
+        message.roomId != _roomId) {
+      return;
+    }
+
+    final messages = _mergeNewMessages(state.messages, [message]);
+    if (identical(messages, state.messages)) {
+      return;
+    }
+
+    state = state.copyWith(
+      status: ChatMessagesLoadStatus.ready,
+      messages: messages,
+      errorMessage: null,
+    );
+  }
+
+  void _handleLiveError(Object error, int generation) {
+    if (_isDisposed ||
+        generation != _liveGeneration ||
+        _failedLiveGeneration == generation) {
+      return;
+    }
+
+    _failedLiveGeneration = generation;
+    final failure = error is ChatMessageFailureException
+        ? error.failure
+        : const UnknownChatMessageFailure();
+    state = _stateForLiveFailure(failure);
+    unawaited(refreshMessages());
+    _scheduleLiveReconnect();
+  }
+
+  void _scheduleLiveReconnect() {
+    if (_isDisposed ||
+        _liveReconnectTimer?.isActive == true ||
+        _liveReconnectAttempts >= _maxLiveReconnectAttempts) {
+      return;
+    }
+
+    _liveReconnectAttempts++;
+    _liveReconnectTimer = Timer(_liveReconnectDelay, () {
+      if (_isDisposed || ref.read(authSessionProvider) == null) {
+        return;
+      }
+
+      final liveReady = _startLiveMessages();
+      unawaited(liveReady.then((_) => refreshMessages()).catchError((_) {}));
+    });
   }
 
   ChatMessagesState _stateForLoadFailure(ChatMessageFailure failure) {
@@ -206,6 +279,17 @@ class ChatMessagesController
     return state.copyWith(
       status: ChatMessagesLoadStatus.ready,
       errorMessage: message,
+    );
+  }
+
+  ChatMessagesState _stateForLiveFailure(ChatMessageFailure failure) {
+    if (state.isInitialLoading || state.isInitialFailure) {
+      return _stateForLoadFailure(failure);
+    }
+
+    return state.copyWith(
+      status: ChatMessagesLoadStatus.ready,
+      errorMessage: _messageForFailure(failure),
     );
   }
 
@@ -255,23 +339,37 @@ class ChatMessagesController
     List<ChatMessage> currentMessages,
     List<ChatMessage> receivedMessages,
   ) {
+    final seenMessageIds = <String>{};
     final remainingCurrentCounts = <String, int>{};
     for (final message in currentMessages) {
+      if (message.id.isNotEmpty) {
+        seenMessageIds.add(message.id);
+      }
+
       final key = _messageMergeKey(message);
       remainingCurrentCounts[key] = (remainingCurrentCounts[key] ?? 0) + 1;
     }
 
     final newMessages = <ChatMessage>[];
     for (final message in receivedMessages) {
-      final key = _messageMergeKey(message);
-      final remainingCount = remainingCurrentCounts[key] ?? 0;
-
-      if (remainingCount > 0) {
-        remainingCurrentCounts[key] = remainingCount - 1;
+      if (message.id.isNotEmpty && seenMessageIds.contains(message.id)) {
         continue;
       }
 
+      if (message.id.isEmpty) {
+        final key = _messageMergeKey(message);
+        final remainingCount = remainingCurrentCounts[key] ?? 0;
+
+        if (remainingCount > 0) {
+          remainingCurrentCounts[key] = remainingCount - 1;
+          continue;
+        }
+      }
+
       newMessages.add(message);
+      if (message.id.isNotEmpty) {
+        seenMessageIds.add(message.id);
+      }
     }
 
     if (newMessages.isEmpty) {

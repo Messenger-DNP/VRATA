@@ -7,6 +7,7 @@ import 'package:frontend/features/auth/domain/entities/auth_session.dart';
 import 'package:frontend/features/chat_room/chat_room_providers.dart';
 import 'package:frontend/features/chat_room/domain/entities/chat_message.dart';
 import 'package:frontend/features/chat_room/domain/entities/chat_message_failure.dart';
+import 'package:frontend/features/chat_room/domain/entities/chat_messages_observation.dart';
 import 'package:frontend/features/chat_room/domain/repositories/chat_messages_repository.dart';
 import 'package:frontend/features/chat_room/presentation/controllers/chat_messages_controller.dart';
 import 'package:frontend/features/chat_room/presentation/state/chat_messages_state.dart';
@@ -37,13 +38,22 @@ void main() {
       expect(state.messages.single.content, 'hello');
     });
 
-    test('sends message with session body and refreshes messages', () async {
+    test('sends message with session body and keeps REST send separate',
+        () async {
       var loadCalls = 0;
       _SentMessage? sentMessage;
+      late StreamController<ChatMessage> liveMessages;
       final repository = FakeChatMessagesRepository(
         onLoadMessages: ({required roomId, required userId}) async {
           loadCalls++;
-          return loadCalls == 1 ? [] : [sampleOwnMessage];
+          return [];
+        },
+        onObserveMessages: ({required roomId}) {
+          liveMessages = StreamController<ChatMessage>();
+          return ChatMessagesObservation(
+            messages: liveMessages.stream,
+            ready: Future<void>.value(),
+          );
         },
         onSendMessage: ({
           required roomId,
@@ -66,7 +76,8 @@ void main() {
         (previous, next) {},
       );
       addTearDown(subscription.close);
-      await pumpEventQueue();
+      await _pumpUntil(() => loadCalls == 2);
+      final loadCallsBeforeSend = loadCalls;
 
       final sent = await container
           .read(chatMessagesControllerProvider(7).notifier)
@@ -77,8 +88,13 @@ void main() {
       expect(sentMessage?.userId, 42);
       expect(sentMessage?.username, 'tester');
       expect(sentMessage?.content, 'hello');
-      expect(loadCalls, 2);
+      expect(loadCalls, loadCallsBeforeSend);
       expect(subscription.read().isSending, isFalse);
+      expect(subscription.read().messages, isEmpty);
+
+      liveMessages.add(sampleOwnMessage);
+      await pumpEventQueue();
+
       expect(subscription.read().messages.single.content, 'hello');
     });
 
@@ -113,8 +129,7 @@ void main() {
       expect(subscription.read().sendErrorMessage, 'Please enter a message.');
     });
 
-    test('merges only new received messages without obvious duplicates',
-        () async {
+    test('merges only new received messages by id', () async {
       var loadCalls = 0;
       final repository = FakeChatMessagesRepository(
         onLoadMessages: ({required roomId, required userId}) async {
@@ -124,7 +139,7 @@ void main() {
           }
 
           return [
-            sampleOwnMessageWithDifferentId,
+            sampleOwnMessage,
             sampleOtherMessage,
           ];
         },
@@ -179,100 +194,192 @@ void main() {
       expect(subscription.read().status, ChatMessagesLoadStatus.ready);
     });
 
-    test('send waits for active poll then starts a fresh refresh', () async {
-      final pollingLoad = Completer<List<ChatMessage>>();
-      final sendRefreshLoad = Completer<List<ChatMessage>>();
+    test('live stream appends messages and ignores duplicate ids', () async {
+      late StreamController<ChatMessage> liveMessages;
+      var loadCalls = 0;
+      final repository = FakeChatMessagesRepository(
+        onLoadMessages: ({required roomId, required userId}) async {
+          loadCalls++;
+          return [sampleOwnMessage];
+        },
+        onObserveMessages: ({required roomId}) {
+          expect(roomId, 7);
+          liveMessages = StreamController<ChatMessage>();
+          return ChatMessagesObservation(
+            messages: liveMessages.stream,
+            ready: Future<void>.value(),
+          );
+        },
+      );
+      final container = _buildContainer(repository: repository);
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        chatMessagesControllerProvider(7),
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+
+      await _pumpUntil(() => loadCalls == 2);
+
+      liveMessages
+        ..add(sampleOwnMessage)
+        ..add(sampleOtherMessage);
+      await pumpEventQueue();
+
+      final messages = subscription.read().messages;
+      expect(messages, [sampleOwnMessage, sampleOtherMessage]);
+    });
+
+    test('ignores duplicate send while send request is pending', () async {
+      final sendCompleter = Completer<void>();
       var loadCalls = 0;
       var sendCalls = 0;
-      var activeLoads = 0;
-      var maxActiveLoads = 0;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) {
+        onLoadMessages: ({required roomId, required userId}) async {
           loadCalls++;
-          activeLoads++;
-          if (activeLoads > maxActiveLoads) {
-            maxActiveLoads = activeLoads;
-          }
-
-          late final Future<List<ChatMessage>> result;
-          if (loadCalls == 2) {
-            result = pollingLoad.future;
-          } else if (loadCalls == 3) {
-            result = sendRefreshLoad.future;
-          } else {
-            result = Future.value([]);
-          }
-
-          return result.whenComplete(() {
-            activeLoads--;
-          });
+          return [];
         },
         onSendMessage: ({
           required roomId,
           required userId,
           required username,
           required content,
-        }) async {
+        }) {
           sendCalls++;
+          return sendCompleter.future;
         },
       );
-      final container = _buildContainer(
-        repository: repository,
-        pollingInterval: const Duration(milliseconds: 10),
+      final container = _buildContainer(repository: repository);
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        chatMessagesControllerProvider(7),
+        (previous, next) {},
       );
+      addTearDown(subscription.close);
+
+      await _pumpUntil(() => loadCalls == 2);
+
+      final firstSend = container
+          .read(chatMessagesControllerProvider(7).notifier)
+          .sendMessage('hello');
+      await pumpEventQueue();
+
+      expect(sendCalls, 1);
+      expect(subscription.read().isSending, isTrue);
+
+      final duplicateSend = await container
+          .read(chatMessagesControllerProvider(7).notifier)
+          .sendMessage('hello');
+
+      expect(duplicateSend, isFalse);
+      expect(sendCalls, 1);
+
+      sendCompleter.complete();
+
+      expect(await firstSend, isTrue);
+      expect(subscription.read().isSending, isFalse);
+      expect(subscription.read().messages, isEmpty);
+    });
+
+    test('live stream stops after dispose', () async {
+      var liveCancelled = false;
+      final repository = FakeChatMessagesRepository(
+        onLoadMessages: ({required roomId, required userId}) async => [],
+        onObserveMessages: ({required roomId}) {
+          final liveMessages = StreamController<ChatMessage>(
+            onCancel: () {
+              liveCancelled = true;
+            },
+          );
+
+          return ChatMessagesObservation(
+            messages: liveMessages.stream,
+            ready: Future<void>.value(),
+          );
+        },
+      );
+      final container = _buildContainer(repository: repository);
       final subscription = container.listen(
         chatMessagesControllerProvider(7),
         (previous, next) {},
       );
 
       await pumpEventQueue();
-      expect(loadCalls, 1);
-
-      await Future<void>.delayed(const Duration(milliseconds: 15));
-      expect(loadCalls, 2);
-
-      final send = container
-          .read(chatMessagesControllerProvider(7).notifier)
-          .sendMessage('hello');
-      await pumpEventQueue();
-
-      expect(sendCalls, 1);
-      expect(loadCalls, 2);
-
-      pollingLoad.complete([]);
-      await pumpEventQueue();
-
-      expect(loadCalls, 3);
-      expect(maxActiveLoads, 1);
-
-      sendRefreshLoad.complete([sampleOwnMessage]);
-      expect(await send, isTrue);
-      expect(subscription.read().messages, [sampleOwnMessage]);
-
       subscription.close();
       container.dispose();
+
+      await pumpEventQueue();
+      expect(liveCancelled, isTrue);
     });
 
-    test('ignores duplicate send while post-send refresh is pending', () async {
-      final sendRefreshLoad = Completer<List<ChatMessage>>();
+    test('maps live stream failures to non-blocking error state', () async {
+      late StreamController<ChatMessage> liveMessages;
+      final recoveryLoad = Completer<List<ChatMessage>>();
       var loadCalls = 0;
-      var sendCalls = 0;
       final repository = FakeChatMessagesRepository(
         onLoadMessages: ({required roomId, required userId}) {
           loadCalls++;
-          if (loadCalls == 2) {
-            return sendRefreshLoad.future;
+          if (loadCalls < 3) {
+            return Future.value([]);
           }
 
-          return Future.value([]);
+          return recoveryLoad.future;
         },
-        onSendMessage: ({
-          required roomId,
-          required userId,
-          required username,
-          required content,
-        }) async {
-          sendCalls++;
+        onObserveMessages: ({required roomId}) {
+          liveMessages = StreamController<ChatMessage>();
+          return ChatMessagesObservation(
+            messages: liveMessages.stream,
+            ready: Future<void>.value(),
+          );
+        },
+      );
+      final container = _buildContainer(repository: repository);
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        chatMessagesControllerProvider(7),
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+
+      await _pumpUntil(() => loadCalls == 2);
+
+      liveMessages.addError(
+        const ChatMessageFailureException(
+          NetworkChatMessageFailure('Live connection closed.'),
+        ),
+      );
+      await _pumpUntil(() => loadCalls == 3);
+
+      final state = subscription.read();
+      expect(state.status, ChatMessagesLoadStatus.ready);
+      expect(state.errorMessage, 'Live connection closed.');
+
+      recoveryLoad.complete([]);
+      await pumpEventQueue();
+      expect(subscription.read().errorMessage, isNull);
+    });
+
+    test('starts live stream before first load and catches up after ready',
+        () async {
+      final firstLoad = Completer<List<ChatMessage>>();
+      final liveReady = Completer<void>();
+      var loadCalls = 0;
+      var observeCalls = 0;
+      final repository = FakeChatMessagesRepository(
+        onLoadMessages: ({required roomId, required userId}) {
+          loadCalls++;
+          if (loadCalls == 1) {
+            return firstLoad.future;
+          }
+
+          return Future.value([sampleOwnMessage, sampleOtherMessage]);
+        },
+        onObserveMessages: ({required roomId}) {
+          observeCalls++;
+          return ChatMessagesObservation(
+            messages: const Stream.empty(),
+            ready: liveReady.future,
+          );
         },
       );
       final container = _buildContainer(repository: repository);
@@ -284,70 +391,63 @@ void main() {
       addTearDown(subscription.close);
 
       await pumpEventQueue();
+
+      expect(observeCalls, 1);
       expect(loadCalls, 1);
 
-      final firstSend = container
-          .read(chatMessagesControllerProvider(7).notifier)
-          .sendMessage('hello');
+      liveReady.complete();
       await pumpEventQueue();
+      expect(loadCalls, 1);
 
-      expect(sendCalls, 1);
-      expect(loadCalls, 2);
-      expect(subscription.read().isSending, isTrue);
+      firstLoad.complete([sampleOwnMessage]);
+      await _pumpUntil(() => loadCalls == 2);
 
-      final duplicateSend = await container
-          .read(chatMessagesControllerProvider(7).notifier)
-          .sendMessage('hello');
-
-      expect(duplicateSend, isFalse);
-      expect(sendCalls, 1);
-
-      sendRefreshLoad.complete([sampleOwnMessage]);
-
-      expect(await firstSend, isTrue);
-      expect(subscription.read().isSending, isFalse);
-      expect(subscription.read().messages, [sampleOwnMessage]);
+      final messages = subscription.read().messages;
+      expect(messages, [sampleOwnMessage, sampleOtherMessage]);
     });
 
-    test('polling does not overlap and stops after dispose', () async {
-      final pollingLoad = Completer<List<ChatMessage>>();
+    test('live stream failure triggers REST catch-up', () async {
+      late StreamController<ChatMessage> liveMessages;
       var loadCalls = 0;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) {
+        onLoadMessages: ({required roomId, required userId}) async {
           loadCalls++;
-          if (loadCalls == 2) {
-            return pollingLoad.future;
+          if (loadCalls < 3) {
+            return [sampleOwnMessage];
           }
 
-          return Future.value([]);
+          return [sampleOwnMessage, sampleOtherMessage];
+        },
+        onObserveMessages: ({required roomId}) {
+          liveMessages = StreamController<ChatMessage>();
+          return ChatMessagesObservation(
+            messages: liveMessages.stream,
+            ready: Future<void>.value(),
+          );
         },
       );
-      final container = _buildContainer(
-        repository: repository,
-        pollingInterval: const Duration(milliseconds: 10),
-      );
+      final container = _buildContainer(repository: repository);
+      addTearDown(container.dispose);
       final subscription = container.listen(
         chatMessagesControllerProvider(7),
         (previous, next) {},
       );
+      addTearDown(subscription.close);
 
-      await pumpEventQueue();
-      expect(loadCalls, 1);
+      await _pumpUntil(() => loadCalls == 2);
 
-      await Future<void>.delayed(const Duration(milliseconds: 15));
-      expect(loadCalls, 2);
+      liveMessages.addError(
+        const ChatMessageFailureException(
+          NetworkChatMessageFailure('Live connection closed.'),
+        ),
+      );
 
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-      expect(loadCalls, 2);
+      await _pumpUntil(() => loadCalls == 3);
 
-      pollingLoad.complete([]);
-      await pumpEventQueue();
-      subscription.close();
-      container.dispose();
-
-      final callsAfterDispose = loadCalls;
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-      expect(loadCalls, callsAfterDispose);
+      expect(
+        subscription.read().messages,
+        [sampleOwnMessage, sampleOtherMessage],
+      );
     });
 
     test('maps repository load failures to initial error state', () async {
@@ -378,7 +478,6 @@ void main() {
 ProviderContainer _buildContainer({
   required ChatMessagesRepository repository,
   AuthSession? session,
-  Duration? pollingInterval,
 }) {
   final effectiveSession = session ?? sampleSession;
 
@@ -388,8 +487,6 @@ ProviderContainer _buildContainer({
         () => FakeAuthSessionController(effectiveSession),
       ),
       chatMessagesRepositoryProvider.overrideWith((ref) => repository),
-      if (pollingInterval != null)
-        chatMessagesPollingIntervalProvider.overrideWithValue(pollingInterval),
     ],
   );
 }
@@ -406,6 +503,7 @@ class FakeAuthSessionController extends AuthSessionController {
 class FakeChatMessagesRepository implements ChatMessagesRepository {
   FakeChatMessagesRepository({
     required this.onLoadMessages,
+    this.onObserveMessages,
     this.onSendMessage,
   });
 
@@ -419,6 +517,8 @@ class FakeChatMessagesRepository implements ChatMessagesRepository {
     required String username,
     required String content,
   })? onSendMessage;
+  final ChatMessagesObservation Function({required int roomId})?
+      onObserveMessages;
 
   @override
   Future<List<ChatMessage>> loadMessages({
@@ -426,6 +526,15 @@ class FakeChatMessagesRepository implements ChatMessagesRepository {
     required int userId,
   }) {
     return onLoadMessages(roomId: roomId, userId: userId);
+  }
+
+  @override
+  ChatMessagesObservation observeMessages({required int roomId}) {
+    return onObserveMessages?.call(roomId: roomId) ??
+        ChatMessagesObservation(
+          messages: const Stream.empty(),
+          ready: Future<void>.value(),
+        );
   }
 
   @override
@@ -463,6 +572,18 @@ class _SentMessage {
   final String content;
 }
 
+Future<void> _pumpUntil(bool Function() condition) async {
+  for (var attempt = 0; attempt < 20; attempt++) {
+    if (condition()) {
+      return;
+    }
+
+    await pumpEventQueue();
+  }
+
+  fail('Condition was not met before the event queue settled.');
+}
+
 final sampleSession = AuthSession(
   userId: 42,
   username: 'tester',
@@ -473,14 +594,6 @@ final sampleSession = AuthSession(
 
 const sampleOwnMessage = ChatMessage(
   id: 'message-1',
-  roomId: 7,
-  userId: 42,
-  username: 'tester',
-  content: 'hello',
-);
-
-const sampleOwnMessageWithDifferentId = ChatMessage(
-  id: 'message-1-reissued',
   roomId: 7,
   userId: 42,
   username: 'tester',

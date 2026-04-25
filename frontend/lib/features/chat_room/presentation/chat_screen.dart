@@ -259,10 +259,18 @@ class _MessagesPanel extends StatelessWidget {
     }
 
     if (state.isEmpty) {
-      return const _PanelState(
-        icon: Icons.chat_bubble_outline_rounded,
-        title: 'No messages yet',
-        message: 'Send the first message below.',
+      return Column(
+        children: [
+          if (state.errorMessage != null)
+            _InlineStatus(message: state.errorMessage!, isError: true),
+          const Expanded(
+            child: _PanelState(
+              icon: Icons.chat_bubble_outline_rounded,
+              title: 'No messages yet',
+              message: 'Send the first message below.',
+            ),
+          ),
+        ],
       );
     }
 
