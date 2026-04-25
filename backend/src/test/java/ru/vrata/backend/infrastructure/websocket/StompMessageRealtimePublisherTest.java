@@ -5,6 +5,8 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
+import java.time.Instant;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -21,7 +23,8 @@ class StompMessageRealtimePublisherTest {
                 1L,
                 42L,
                 "rolan",
-                "hello"
+                "hello",
+                Instant.parse("2026-04-25T08:00:00Z")
         );
 
         publisher.publish(message);
@@ -38,5 +41,6 @@ class StompMessageRealtimePublisherTest {
         assertEquals(message.userId(), payload.userId());
         assertEquals(message.username(), payload.username());
         assertEquals(message.content(), payload.content());
+        assertEquals(message.timestamp(), payload.timestamp());
     }
 }

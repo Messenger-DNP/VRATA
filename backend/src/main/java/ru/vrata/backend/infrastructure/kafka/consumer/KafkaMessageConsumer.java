@@ -68,6 +68,7 @@ public class KafkaMessageConsumer {
                 && message.username() != null
                 && !message.username().isBlank()
                 && message.content() != null
-                && !message.content().isBlank();
+                && !message.content().isBlank()
+                && message.timestamp() != null;
     }
 }

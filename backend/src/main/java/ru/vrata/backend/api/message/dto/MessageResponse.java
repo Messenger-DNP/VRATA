@@ -1,8 +1,8 @@
 package ru.vrata.backend.api.message.dto;
 
 import ru.vrata.backend.domain.model.Message;
-import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
+import java.time.Instant;
 import java.util.UUID;
 
 public record MessageResponse(
@@ -10,7 +10,8 @@ public record MessageResponse(
         Long roomId,
         Long userId,
         String username,
-        String content
+        String content,
+        Instant timestamp
 ) {
     public static MessageResponse from(Message message) {
         return new MessageResponse(
@@ -18,7 +19,8 @@ public record MessageResponse(
                 message.roomId(),
                 message.userId(),
                 message.username(),
-                message.content()
+                message.content(),
+                message.timestamp()
         );
     }
 }

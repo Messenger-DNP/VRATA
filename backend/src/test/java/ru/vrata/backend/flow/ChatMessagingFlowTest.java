@@ -66,8 +66,7 @@ class ChatMessagingFlowTest {
 
         deliverProducedMessages();
 
-        assertUserRoomMessages(firstUserId, room.id());
-        assertUserRoomMessages(secondUserId, room.id());
+        assertRoomMessages(room.id());
     }
 
     private long register(String username, String password) throws Exception {
@@ -149,15 +148,16 @@ class ChatMessagingFlowTest {
         }
     }
 
-    private void assertUserRoomMessages(long userId, long roomId) throws Exception {
-        mockMvc.perform(get("/api/v1/rooms/{roomId}/messages", roomId)
-                        .queryParam("userId", String.valueOf(userId)))
+    private void assertRoomMessages(long roomId) throws Exception {
+        mockMvc.perform(get("/api/v1/rooms/{roomId}/messages", roomId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].roomId").value(roomId))
                 .andExpect(jsonPath("$[1].roomId").value(roomId))
                 .andExpect(jsonPath("$[0].content").value("Hello from Alice"))
-                .andExpect(jsonPath("$[1].content").value("Hello from Bob"));
+                .andExpect(jsonPath("$[1].content").value("Hello from Bob"))
+                .andExpect(jsonPath("$[0].timestamp").isNotEmpty())
+                .andExpect(jsonPath("$[1].timestamp").isNotEmpty());
     }
 
     private long extractLongField(String json, String fieldName) {

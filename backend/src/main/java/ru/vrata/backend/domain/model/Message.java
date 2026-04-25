@@ -2,9 +2,11 @@ package ru.vrata.backend.domain.model;
 
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.UUID;
 
-public record Message(UUID id, Long roomId, Long userId, String username, String content) {
+public record Message(UUID id, Long roomId, Long userId, String username, String content, Instant timestamp) {
     public Message {
         if (id == null) {
             throw new IllegalArgumentException("message id must not be null");
@@ -15,16 +17,37 @@ public record Message(UUID id, Long roomId, Long userId, String username, String
         if (userId == null || userId <= 0) {
             throw new IllegalArgumentException("user id must be positive");
         }
+        if (timestamp == null) {
+            throw new IllegalArgumentException("timestamp must not be null");
+        }
         username = User.normalizeUsername(username);
         content = normalizeContent(content);
     }
 
     public static Message create(Long roomId, Long userId, String username, String content) {
-        return new Message(UUID.randomUUID(), roomId, userId, username, content);
+        return new Message(UUID.randomUUID(), roomId, userId, username, content, Instant.now());
     }
 
     public static Message from(KafkaMessage kafkaMessage) {
-        return new Message(UUID.randomUUID(), kafkaMessage.roomId(), kafkaMessage.userId(), kafkaMessage.username(), kafkaMessage.content());
+        return new Message(
+                toStableUuid(kafkaMessage.id()),
+                kafkaMessage.roomId(),
+                kafkaMessage.userId(),
+                kafkaMessage.username(),
+                kafkaMessage.content(),
+                kafkaMessage.timestamp()
+        );
+    }
+
+    private static UUID toStableUuid(String rawId) {
+        if (rawId == null) {
+            throw new IllegalArgumentException("message id must not be null");
+        }
+        try {
+            return UUID.fromString(rawId);
+        } catch (RuntimeException ignored) {
+            return UUID.nameUUIDFromBytes(rawId.getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     public static String normalizeContent(String raw) {

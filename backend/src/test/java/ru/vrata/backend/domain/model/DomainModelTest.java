@@ -1,11 +1,14 @@
 package ru.vrata.backend.domain.model;
 
 import org.junit.jupiter.api.Test;
+import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
 import java.time.Instant;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -45,6 +48,25 @@ class DomainModelTest {
 
         assertTrue(message.belongsToRoom(1L));
         assertTrue(message.writtenBy(1L));
+    }
+
+    @Test
+    void messageFromKafkaShouldKeepStableId() {
+        String rawId = UUID.randomUUID().toString();
+        KafkaMessage kafkaMessage = new KafkaMessage(
+                rawId,
+                1L,
+                1L,
+                "rolan",
+                "hello",
+                Instant.parse("2026-04-25T08:00:00Z")
+        );
+
+        Message first = Message.from(kafkaMessage);
+        Message second = Message.from(kafkaMessage);
+
+        assertEquals(UUID.fromString(rawId), first.id());
+        assertEquals(first.id(), second.id());
     }
 
     @Test

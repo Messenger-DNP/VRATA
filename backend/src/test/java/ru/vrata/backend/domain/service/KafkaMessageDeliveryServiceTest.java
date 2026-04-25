@@ -5,9 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import ru.vrata.backend.domain.model.ChatRoom;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
-import ru.vrata.backend.domain.repository.inmemory.InMemoryDeliveredMessageRepository;
+import ru.vrata.backend.domain.repository.inmemory.InMemoryRoomMessageRepository;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 
@@ -21,18 +22,18 @@ import static org.mockito.Mockito.when;
 class KafkaMessageDeliveryServiceTest {
 
     private ChatRoomRepository chatRoomRepository;
-    private InMemoryDeliveredMessageRepository deliveredMessageRepository;
+    private InMemoryRoomMessageRepository roomMessageRepository;
     private MessageRealtimePublisher messageRealtimePublisher;
     private KafkaMessageDeliveryService deliveryService;
 
     @BeforeEach
     void setUp() {
         chatRoomRepository = Mockito.mock(ChatRoomRepository.class);
-        deliveredMessageRepository = new InMemoryDeliveredMessageRepository();
+        roomMessageRepository = new InMemoryRoomMessageRepository();
         messageRealtimePublisher = Mockito.mock(MessageRealtimePublisher.class);
         deliveryService = new KafkaMessageDeliveryService(
                 chatRoomRepository,
-                deliveredMessageRepository,
+                roomMessageRepository,
                 messageRealtimePublisher
         );
     }
@@ -44,7 +45,8 @@ class KafkaMessageDeliveryServiceTest {
                 1L,
                 10L,
                 "riia",
-                "hello"
+                "hello",
+                Instant.parse("2026-04-25T08:00:00Z")
         );
 
         when(chatRoomRepository.findById(1L)).thenReturn(Optional.empty());
@@ -55,8 +57,7 @@ class KafkaMessageDeliveryServiceTest {
         verify(chatRoomRepository, never()).findMemberIdsByRoomId(Mockito.anyLong());
         verify(messageRealtimePublisher, never()).publish(Mockito.any());
 
-        assertTrue(deliveredMessageRepository.findByUserId(10L).isEmpty());
-        assertTrue(deliveredMessageRepository.findByUserId(20L).isEmpty());
+        assertTrue(roomMessageRepository.findByRoomId(1L).isEmpty());
     }
 
     @Test
@@ -66,7 +67,8 @@ class KafkaMessageDeliveryServiceTest {
                 1L,
                 10L,
                 "riia",
-                "hello"
+                "hello",
+                Instant.parse("2026-04-25T08:00:00Z")
         );
 
         ChatRoom room = new ChatRoom(1L, "test-room", "abcdef");
@@ -79,11 +81,8 @@ class KafkaMessageDeliveryServiceTest {
         verify(chatRoomRepository, times(1)).findById(1L);
         verify(chatRoomRepository, times(1)).findMemberIdsByRoomId(1L);
 
-        assertEquals(1, deliveredMessageRepository.findByUserId(10L).size());
-        assertEquals(1, deliveredMessageRepository.findByUserId(20L).size());
-        assertEquals(message, deliveredMessageRepository.findByUserId(10L).get(0));
-        assertEquals(message, deliveredMessageRepository.findByUserId(20L).get(0));
-        assertTrue(deliveredMessageRepository.findByUserId(30L).isEmpty());
+        assertEquals(1, roomMessageRepository.findByRoomId(1L).size());
+        assertEquals(message, roomMessageRepository.findByRoomId(1L).get(0));
         verify(messageRealtimePublisher, times(1)).publish(message);
     }
 
@@ -94,7 +93,8 @@ class KafkaMessageDeliveryServiceTest {
                 1L,
                 10L,
                 "riia",
-                "hello"
+                "hello",
+                Instant.parse("2026-04-25T08:00:00Z")
         );
 
         ChatRoom room = new ChatRoom(1L, "test-room", "abcdef");
@@ -107,8 +107,7 @@ class KafkaMessageDeliveryServiceTest {
         verify(chatRoomRepository, times(1)).findById(1L);
         verify(chatRoomRepository, times(1)).findMemberIdsByRoomId(1L);
 
-        assertTrue(deliveredMessageRepository.findByUserId(10L).isEmpty());
-        assertTrue(deliveredMessageRepository.findByUserId(20L).isEmpty());
+        assertTrue(roomMessageRepository.findByRoomId(1L).isEmpty());
         verify(messageRealtimePublisher, never()).publish(Mockito.any());
     }
 }

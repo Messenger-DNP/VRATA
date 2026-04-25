@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ru.vrata.backend.api.message.dto.MessageResponse;
@@ -38,10 +37,9 @@ public class MessageController {
     }
 
     @GetMapping("/rooms/{roomId}/messages")
-    public List<MessageResponse> getRoomMessages(@PathVariable Long roomId,
-                                                 @RequestParam Long userId)
+    public List<MessageResponse> getRoomMessages(@PathVariable Long roomId)
     {
-        return messageService.getMessagesForRoom(roomId, userId).stream()
+        return messageService.getMessagesForRoom(roomId).stream()
                 .map(MessageResponse::from)
                 .toList();
     }
