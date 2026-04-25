@@ -12,7 +12,8 @@ import 'package:http/testing.dart';
 
 void main() {
   group('RemoteChatMessagesRepository', () {
-    test('gets room messages with user id and maps response', () async {
+    test('gets room messages without user id query and maps response',
+        () async {
       late Uri capturedUri;
 
       final repository = _buildRepository(
@@ -41,11 +42,11 @@ void main() {
         }),
       );
 
-      final messages = await repository.loadMessages(roomId: 7, userId: 42);
+      final messages = await repository.loadMessages(roomId: 7);
 
       expect(
         capturedUri.toString(),
-        'http://localhost:8080/api/v1/rooms/7/messages?userId=42',
+        'http://localhost:8080/api/v1/rooms/7/messages',
       );
       expect(messages, hasLength(2));
       expect(messages.first.id, 'message-1');
@@ -128,7 +129,7 @@ void main() {
       );
 
       expect(
-        () => repository.loadMessages(roomId: 7, userId: 42),
+        () => repository.loadMessages(roomId: 7),
         throwsA(
           isA<ChatMessageFailureException>().having(
             (error) => error.failure,

@@ -4,7 +4,6 @@ import 'package:frontend/features/chat_room/domain/entities/chat_messages_observ
 abstract interface class ChatMessagesRepository {
   Future<List<ChatMessage>> loadMessages({
     required int roomId,
-    required int userId,
   });
 
   ChatMessagesObservation observeMessages({

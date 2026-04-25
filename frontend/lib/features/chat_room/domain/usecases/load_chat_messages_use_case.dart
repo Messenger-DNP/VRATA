@@ -8,8 +8,7 @@ class LoadChatMessagesUseCase {
 
   Future<List<ChatMessage>> call({
     required int roomId,
-    required int userId,
   }) {
-    return _repository.loadMessages(roomId: roomId, userId: userId);
+    return _repository.loadMessages(roomId: roomId);
   }
 }

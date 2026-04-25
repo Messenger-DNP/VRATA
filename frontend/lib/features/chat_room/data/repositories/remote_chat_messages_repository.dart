@@ -19,12 +19,10 @@ class RemoteChatMessagesRepository implements ChatMessagesRepository {
   @override
   Future<List<ChatMessage>> loadMessages({
     required int roomId,
-    required int userId,
   }) async {
     try {
       final response = await _remoteDatasource.getRoomMessages(
         roomId: roomId,
-        userId: userId,
       );
 
       return response.map((message) => message.toDomain()).toList();

@@ -162,7 +162,6 @@ class ChatMessagesController
     try {
       final receivedMessages = await ref.read(loadChatMessagesUseCaseProvider)(
         roomId: _roomId,
-        userId: session.userId,
       );
 
       if (_isDisposed) {

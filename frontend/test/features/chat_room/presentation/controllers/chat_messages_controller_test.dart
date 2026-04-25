@@ -16,9 +16,8 @@ void main() {
   group('ChatMessagesController', () {
     test('loads messages when provider opens', () async {
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) async {
+        onLoadMessages: ({required roomId}) async {
           expect(roomId, 7);
-          expect(userId, 42);
           return [sampleOwnMessage];
         },
       );
@@ -44,7 +43,7 @@ void main() {
       _SentMessage? sentMessage;
       late StreamController<ChatMessage> liveMessages;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) async {
+        onLoadMessages: ({required roomId}) async {
           loadCalls++;
           return [];
         },
@@ -101,7 +100,7 @@ void main() {
     test('validates empty content before send request', () async {
       var sendCalls = 0;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) async => [],
+        onLoadMessages: ({required roomId}) async => [],
         onSendMessage: ({
           required roomId,
           required userId,
@@ -132,7 +131,7 @@ void main() {
     test('merges only new received messages by id', () async {
       var loadCalls = 0;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) async {
+        onLoadMessages: ({required roomId}) async {
           loadCalls++;
           if (loadCalls == 1) {
             return [sampleOwnMessage];
@@ -167,7 +166,7 @@ void main() {
       final firstLoad = Completer<List<ChatMessage>>();
       var loadCalls = 0;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) {
+        onLoadMessages: ({required roomId}) {
           loadCalls++;
           return firstLoad.future;
         },
@@ -198,7 +197,7 @@ void main() {
       late StreamController<ChatMessage> liveMessages;
       var loadCalls = 0;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) async {
+        onLoadMessages: ({required roomId}) async {
           loadCalls++;
           return [sampleOwnMessage];
         },
@@ -235,7 +234,7 @@ void main() {
       var loadCalls = 0;
       var sendCalls = 0;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) async {
+        onLoadMessages: ({required roomId}) async {
           loadCalls++;
           return [];
         },
@@ -284,7 +283,7 @@ void main() {
     test('live stream stops after dispose', () async {
       var liveCancelled = false;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) async => [],
+        onLoadMessages: ({required roomId}) async => [],
         onObserveMessages: ({required roomId}) {
           final liveMessages = StreamController<ChatMessage>(
             onCancel: () {
@@ -317,7 +316,7 @@ void main() {
       final recoveryLoad = Completer<List<ChatMessage>>();
       var loadCalls = 0;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) {
+        onLoadMessages: ({required roomId}) {
           loadCalls++;
           if (loadCalls < 3) {
             return Future.value([]);
@@ -366,7 +365,7 @@ void main() {
       var loadCalls = 0;
       var observeCalls = 0;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) {
+        onLoadMessages: ({required roomId}) {
           loadCalls++;
           if (loadCalls == 1) {
             return firstLoad.future;
@@ -410,7 +409,7 @@ void main() {
       late StreamController<ChatMessage> liveMessages;
       var loadCalls = 0;
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) async {
+        onLoadMessages: ({required roomId}) async {
           loadCalls++;
           if (loadCalls < 3) {
             return [sampleOwnMessage];
@@ -452,7 +451,7 @@ void main() {
 
     test('maps repository load failures to initial error state', () async {
       final repository = FakeChatMessagesRepository(
-        onLoadMessages: ({required roomId, required userId}) async {
+        onLoadMessages: ({required roomId}) async {
           throw const ChatMessageFailureException(
             RoomNotFoundChatMessageFailure(),
           );
@@ -509,7 +508,6 @@ class FakeChatMessagesRepository implements ChatMessagesRepository {
 
   final Future<List<ChatMessage>> Function({
     required int roomId,
-    required int userId,
   }) onLoadMessages;
   final Future<void> Function({
     required int roomId,
@@ -523,9 +521,8 @@ class FakeChatMessagesRepository implements ChatMessagesRepository {
   @override
   Future<List<ChatMessage>> loadMessages({
     required int roomId,
-    required int userId,
   }) {
-    return onLoadMessages(roomId: roomId, userId: userId);
+    return onLoadMessages(roomId: roomId);
   }
 
   @override

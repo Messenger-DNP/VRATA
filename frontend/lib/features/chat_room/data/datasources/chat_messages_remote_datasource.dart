@@ -34,12 +34,9 @@ class ChatMessagesRemoteDatasource {
 
   Future<List<MessageResponseDto>> getRoomMessages({
     required int roomId,
-    required int userId,
   }) async {
     try {
-      final uri = Uri.parse(
-        '$_baseUrl/api/v1/rooms/$roomId/messages',
-      ).replace(queryParameters: {'userId': '$userId'});
+      final uri = Uri.parse('$_baseUrl/api/v1/rooms/$roomId/messages');
       final response = await _client.get(
         uri,
         headers: const {'Accept': 'application/json'},
