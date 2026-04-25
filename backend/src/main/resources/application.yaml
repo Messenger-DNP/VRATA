@@ -12,6 +12,7 @@ spring:
       properties:
         spring.json.trusted.packages: "ru.vrata.backend.infrastructure.kafka"
         spring.json.value.default.type: ru.vrata.backend.infrastructure.kafka.KafkaMessage
+        "metadata.max.age.ms": 5000
 
   mongodb:
     uri: ${SPRING_MONGODB_URI:mongodb://localhost:27017/chatdb}

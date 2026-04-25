@@ -430,16 +430,21 @@ x-kafka-integration:
 x-websocket-integration:
   liveMessages:
     summary: Live room messages for frontend clients.
-    protocol: STOMP over SockJS
-    endpoint: /ws
+    protocol: STOMP over WebSocket
+    endpoint: /ws-stomp
+    fallbackEndpoint: /ws
     brokerPrefix: /topic
     connection:
-      url: http://localhost:8080/ws
+      url: ws://localhost:8080/ws-stomp
+      fallbackUrl: http://localhost:8080/ws
       clientFlow:
-        - Connect to /ws using SockJS.
-        - Create a STOMP client over that SockJS connection.
+        - Connect to /ws-stomp using a native WebSocket.
+        - Create a STOMP client over that WebSocket connection.
         - Subscribe to /topic/rooms/{roomId}/messages after STOMP connect.
         - Keep sending messages with POST /api/v1/messages.
+      sockJsFallbackFlow:
+        - Connect to /ws using SockJS only if the client needs SockJS fallback transport.
+        - Subscribe to the same /topic/rooms/{roomId}/messages destination.
     subscriptions:
       roomMessages:
         destinationTemplate: /topic/rooms/{roomId}/messages
@@ -457,5 +462,7 @@ x-websocket-integration:
       live: Subscribe to the room topic to receive new messages after Kafka delivery.
     notes:
       - The WebSocket contract is receive-only in this version.
+      - Prefer /ws-stomp for regular frontend clients because it uses the native WebSocket handshake.
+      - /ws remains available as a SockJS fallback endpoint.
       - The backend publishes one live event after Kafka delivery succeeds for room members.
       - No extra WebSocket authentication is enforced yet; it follows the current REST auth model.
