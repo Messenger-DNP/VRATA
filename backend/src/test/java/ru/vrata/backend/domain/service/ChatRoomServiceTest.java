@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import ru.vrata.backend.domain.exception.RoomNotFoundException;
 import ru.vrata.backend.domain.repository.inmemory.InMemoryChatRoomRepository;
-import ru.vrata.backend.infrastructure.mongo.service.MongoCounterService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,17 +17,17 @@ import static org.mockito.Mockito.when;
 class ChatRoomServiceTest {
     private ChatRoomService chatRoomService;
     private InMemoryChatRoomRepository chatRoomRepository;
-    private MongoCounterService mongoCounterService;
+    private CryptoIdGenerator cryptoIdGenerator;
 
     @BeforeEach
     void setUp() {
         chatRoomRepository = new InMemoryChatRoomRepository();
-        mongoCounterService = Mockito.mock(MongoCounterService.class);
+        cryptoIdGenerator = Mockito.mock(CryptoIdGenerator.class);
 
-        when(mongoCounterService.nextRoomId())
+        when(cryptoIdGenerator.nextPositiveLong())
                 .thenReturn(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L);
 
-        chatRoomService = new ChatRoomService(chatRoomRepository, mongoCounterService);
+        chatRoomService = new ChatRoomService(chatRoomRepository, cryptoIdGenerator);
     }
 
     @Test
