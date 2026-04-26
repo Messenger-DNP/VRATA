@@ -23,9 +23,6 @@ public class V001CreateBaseIndexesMigration implements MongoMigration {
                 .ensureIndex(new Index().on("username", Sort.Direction.ASC).unique());
 
         mongoTemplate.indexOps("chatrooms")
-                .ensureIndex(new Index().on("roomId", Sort.Direction.ASC).unique());
-
-        mongoTemplate.indexOps("chatrooms")
                 .ensureIndex(new Index().on("inviteCode", Sort.Direction.ASC).unique());
 
         mongoTemplate.indexOps("messages")

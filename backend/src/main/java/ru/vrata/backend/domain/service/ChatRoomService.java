@@ -4,23 +4,25 @@ import org.springframework.stereotype.Service;
 import ru.vrata.backend.domain.exception.RoomNotFoundException;
 import ru.vrata.backend.domain.model.ChatRoom;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
+import ru.vrata.backend.infrastructure.mongo.service.MongoCounterService;
 
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
-    private final AtomicLong roomIdGenerator = new AtomicLong(1L);
+    private final MongoCounterService mongoCounterService;
     private static final int INVITE_CODE_LENGTH = 6;
 
-    public ChatRoomService(ChatRoomRepository chatRoomRepository) {
+    public ChatRoomService(ChatRoomRepository chatRoomRepository,
+                           MongoCounterService mongoCounterService) {
         this.chatRoomRepository = chatRoomRepository;
+        this.mongoCounterService = mongoCounterService;
     }
 
     public ChatRoom createRoom(Long userId, String roomName) {
         validateUserId(userId);
-        Long roomId = roomIdGenerator.getAndIncrement();
+        Long roomId = mongoCounterService.nextRoomId();
         String normalizedName = normalizeOrGenerateRoomName(roomName, roomId);
         ChatRoom room = new ChatRoom(roomId, normalizedName, generateUniqueInviteCode());
 
@@ -65,8 +67,7 @@ public class ChatRoomService {
     }
 
     private String generateUniqueInviteCode() {
-        String code;
-        code = randomInviteCode();
+        String code = randomInviteCode();
 
         while (chatRoomRepository.findByInviteCode(code).isPresent()) {
             code = randomInviteCode();

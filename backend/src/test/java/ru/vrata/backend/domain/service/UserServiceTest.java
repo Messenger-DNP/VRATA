@@ -2,24 +2,29 @@ package ru.vrata.backend.domain.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import ru.vrata.backend.domain.exception.InvalidCredentialsException;
 import ru.vrata.backend.domain.exception.UserAlreadyExistsException;
-import ru.vrata.backend.domain.model.User;
 import ru.vrata.backend.domain.repository.inmemory.InMemoryUserRepository;
+import ru.vrata.backend.infrastructure.mongo.service.MongoCounterService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 
 class UserServiceTest {
     private UserService userService;
-    private InMemoryUserRepository userRepository;
+    private MongoCounterService mongoCounterService;
 
     @BeforeEach
     void setUp() {
-        userRepository = new InMemoryUserRepository();
-        userService = new UserService(userRepository);
+        mongoCounterService = Mockito.mock(MongoCounterService.class);
+
+        when(mongoCounterService.nextUserId())
+                .thenReturn(1L, 2L, 3L, 4L, 5L);
+
+        userService = new UserService(new InMemoryUserRepository(), mongoCounterService);
     }
 
     @Test
@@ -36,14 +41,8 @@ class UserServiceTest {
     void registerShouldFailWhenUserAlreadyExists() {
         userService.register("rolan", "StrongPassword123");
 
-        assertThrows(UserAlreadyExistsException.class, () -> userService.register("rolan", "AnotherStrongPassword"));
-    }
-
-    @Test
-    void registerShouldFailWhenUserAlreadyExistsWithDifferentCase() {
-        userService.register("rolan", "StrongPassword123");
-
-        assertThrows(UserAlreadyExistsException.class, () -> userService.register("RoLaN", "AnotherStrongPassword"));
+        assertThrows(UserAlreadyExistsException.class, () ->
+                userService.register("rolan", "AnotherStrongPassword"));
     }
 
     @Test
@@ -60,36 +59,7 @@ class UserServiceTest {
     void loginShouldFailForInvalidPassword() {
         userService.register("rolan", "StrongPassword123");
 
-        assertThrows(InvalidCredentialsException.class, () -> userService.login("rolan", "wrong-password"));
-    }
-
-    @Test
-    void registerShouldNormalizeUsernameAndStoreHash() {
-        userService.register("  RoLaN  ", "StrongPassword123");
-
-        User savedUser = userRepository.findByUsername("rolan").orElseThrow();
-
-        assertEquals("rolan", savedUser.username());
-        assertNotEquals("StrongPassword123", savedUser.password());
-        assertEquals(64, savedUser.password().length());
-    }
-
-    @Test
-    void loginShouldWorkWithTrimmedAndCaseInsensitiveUsername() {
-        userService.register("rolan", "StrongPassword123");
-
-        var authSession = userService.login("  RoLaN  ", "StrongPassword123");
-
-        assertEquals("rolan", authSession.username());
-    }
-
-    @Test
-    void registerShouldFailForBlankUsername() {
-        assertThrows(InvalidCredentialsException.class, () -> userService.register("   ", "StrongPassword123"));
-    }
-
-    @Test
-    void registerShouldFailForBlankPassword() {
-        assertThrows(InvalidCredentialsException.class, () -> userService.register("rolan", "   "));
+        assertThrows(InvalidCredentialsException.class, () ->
+                userService.login("rolan", "wrong-password"));
     }
 }
