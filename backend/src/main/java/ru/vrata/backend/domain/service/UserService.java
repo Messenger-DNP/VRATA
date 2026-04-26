@@ -6,6 +6,7 @@ import ru.vrata.backend.domain.exception.UserAlreadyExistsException;
 import ru.vrata.backend.domain.model.AuthSession;
 import ru.vrata.backend.domain.model.User;
 import ru.vrata.backend.domain.repository.UserRepository;
+import ru.vrata.backend.infrastructure.mongo.service.MongoCounterService;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -14,17 +15,18 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class UserService {
     private static final Duration AUTH_TOKEN_TTL = Duration.ofHours(12);
 
     private final UserRepository userRepository;
-    private final AtomicLong userIdGenerator = new AtomicLong(1L);
+    private final MongoCounterService mongoCounterService;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository,
+                       MongoCounterService mongoCounterService) {
         this.userRepository = userRepository;
+        this.mongoCounterService = mongoCounterService;
     }
 
     public synchronized AuthSession register(String username, String rawPassword) {
@@ -32,7 +34,7 @@ public class UserService {
         validateUserIsNotTaken(normalizedUsername);
 
         var user = new User(
-                userIdGenerator.getAndIncrement(),
+                mongoCounterService.nextUserId(),
                 normalizedUsername,
                 hashPassword(rawPassword)
         );
