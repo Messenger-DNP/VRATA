@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -20,6 +21,7 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
@@ -32,6 +34,32 @@ import java.util.Map;
 
 @Configuration
 public class KafkaConfig {
+    @Bean
+    public KafkaAdmin kafkaAdmin(
+            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
+            @Value("${spring.kafka.properties.security.protocol:${spring.kafka.security.protocol:}}") String securityProtocol,
+            @Value("${spring.kafka.properties.sasl.mechanism:${spring.kafka.sasl.mechanism:}}") String saslMechanism,
+            @Value("${spring.kafka.properties.sasl.jaas.config:${spring.kafka.sasl.jaas.config:}}") String saslJaasConfig,
+            @Value("${spring.kafka.properties.ssl.truststore.location:${spring.kafka.ssl.trust-store-location:}}") String trustStoreLocation,
+            @Value("${spring.kafka.properties.ssl.truststore.password:${spring.kafka.ssl.trust-store-password:}}") String trustStorePassword,
+            @Value("${spring.kafka.properties.ssl.truststore.type:${spring.kafka.ssl.trust-store-type:}}") String trustStoreType,
+            @Value("${spring.kafka.properties.ssl.truststore.certificates:}") String trustStoreCertificates
+    ) {
+        Map<String, Object> config = new HashMap<>();
+        config.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        applySecurityConfig(
+                config,
+                securityProtocol,
+                saslMechanism,
+                saslJaasConfig,
+                trustStoreLocation,
+                trustStorePassword,
+                trustStoreType,
+                trustStoreCertificates
+        );
+        return new KafkaAdmin(config);
+    }
+
     @Bean
     public ProducerFactory<String, KafkaMessage> producerFactory(
             @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,

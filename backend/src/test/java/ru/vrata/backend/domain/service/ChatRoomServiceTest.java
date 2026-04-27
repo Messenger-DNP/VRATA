@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import ru.vrata.backend.domain.exception.RoomNotFoundException;
+import ru.vrata.backend.domain.repository.ChatRoomRepository;
 import ru.vrata.backend.domain.repository.inmemory.InMemoryChatRoomRepository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,6 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 class ChatRoomServiceTest {
@@ -124,5 +128,22 @@ class ChatRoomServiceTest {
         assertNotNull(room.inviteCode());
         assertEquals(6, room.inviteCode().length());
         assertTrue(room.inviteCode().chars().allMatch(ch -> ch >= 'a' && ch <= 'z'));
+    }
+
+    @Test
+    void createRoomShouldDeleteTopicWhenRepositoryCreateFails() {
+        ChatRoomRepository repository = Mockito.mock(ChatRoomRepository.class);
+        RoomTopicManager topicManager = Mockito.mock(RoomTopicManager.class);
+        CryptoIdGenerator idGenerator = Mockito.mock(CryptoIdGenerator.class);
+
+        when(idGenerator.nextPositiveLong()).thenReturn(100L);
+        when(repository.findById(anyLong())).thenReturn(java.util.Optional.empty());
+        doThrow(new RuntimeException("mongo down")).when(repository).create(any());
+
+        ChatRoomService service = new ChatRoomService(repository, idGenerator, topicManager);
+
+        assertThrows(RuntimeException.class, () -> service.createRoom(1L, "Main room"));
+        Mockito.verify(topicManager).createRoomTopic(100L);
+        Mockito.verify(topicManager).deleteRoomTopic(100L);
     }
 }

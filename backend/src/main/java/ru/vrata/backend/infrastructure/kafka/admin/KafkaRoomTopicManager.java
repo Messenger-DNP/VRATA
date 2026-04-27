@@ -20,8 +20,9 @@ import java.util.concurrent.TimeoutException;
 public class KafkaRoomTopicManager implements RoomTopicManager {
     private static final int ROOM_TOPIC_PARTITIONS = 1;
     private static final short ROOM_TOPIC_REPLICATION_FACTOR = 2;
-    private static final int CREATE_TOPIC_TIMEOUT_SECONDS = 5;
-    private static final int DELETE_TOPIC_TIMEOUT_SECONDS = 5;
+    private static final int CREATE_TOPIC_TIMEOUT_SECONDS = 30;
+    private static final int DELETE_TOPIC_TIMEOUT_SECONDS = 30;
+    private static final int DELETE_TOPIC_MAX_ATTEMPTS = 3;
 
     private final ObjectProvider<KafkaAdmin> kafkaAdminProvider;
 
@@ -37,8 +38,7 @@ public class KafkaRoomTopicManager implements RoomTopicManager {
 
         KafkaAdmin kafkaAdmin = kafkaAdminProvider.getIfAvailable();
         if (kafkaAdmin == null) {
-            log.debug("KafkaAdmin bean is not available, skipping room topic creation");
-            return;
+            throw new IllegalStateException("KafkaAdmin bean is not available, cannot create room topic");
         }
 
         String topic = topicName(roomId);
@@ -76,30 +76,64 @@ public class KafkaRoomTopicManager implements RoomTopicManager {
 
         KafkaAdmin kafkaAdmin = kafkaAdminProvider.getIfAvailable();
         if (kafkaAdmin == null) {
-            log.debug("KafkaAdmin bean is not available, skipping room topic deletion");
+            log.warn("KafkaAdmin bean is not available, skipping room topic deletion");
             return;
         }
 
         String topic = topicName(roomId);
-        try (AdminClient adminClient = AdminClient.create(kafkaAdmin.getConfigurationProperties())) {
-            adminClient.deleteTopics(List.of(topic))
-                    .all()
-                    .get(DELETE_TOPIC_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            log.info("Kafka topic deleted: {}", topic);
-        } catch (ExecutionException exception) {
-            if (exception.getCause() instanceof UnknownTopicOrPartitionException) {
-                log.info("Kafka topic does not exist, skipping deletion: {}", topic);
+        for (int attempt = 1; attempt <= DELETE_TOPIC_MAX_ATTEMPTS; attempt++) {
+            try (AdminClient adminClient = AdminClient.create(kafkaAdmin.getConfigurationProperties())) {
+                adminClient.deleteTopics(List.of(topic))
+                        .all()
+                        .get(DELETE_TOPIC_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                log.info("Kafka topic deleted: {}", topic);
                 return;
-            }
+            } catch (ExecutionException exception) {
+                if (exception.getCause() instanceof UnknownTopicOrPartitionException) {
+                    log.info("Kafka topic does not exist, skipping deletion: {}", topic);
+                    return;
+                }
 
-            log.warn("Failed to delete Kafka topic {}", topic, exception);
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            log.warn("Interrupted while deleting Kafka topic {}", topic, exception);
-        } catch (TimeoutException exception) {
-            log.warn("Timeout while deleting Kafka topic {}", topic, exception);
-        } catch (Exception exception) {
-            log.warn("Unexpected error while deleting Kafka topic {}", topic, exception);
+                if (attempt == DELETE_TOPIC_MAX_ATTEMPTS) {
+                    log.warn("Failed to delete Kafka topic {} after {} attempts", topic, attempt, exception);
+                    return;
+                }
+                log.warn(
+                        "Failed to delete Kafka topic {} on attempt {} of {}, retrying",
+                        topic,
+                        attempt,
+                        DELETE_TOPIC_MAX_ATTEMPTS,
+                        exception
+                );
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                log.warn("Interrupted while deleting Kafka topic {}", topic, exception);
+                return;
+            } catch (TimeoutException exception) {
+                if (attempt == DELETE_TOPIC_MAX_ATTEMPTS) {
+                    log.warn("Timeout while deleting Kafka topic {} after {} attempts", topic, attempt, exception);
+                    return;
+                }
+                log.warn(
+                        "Timeout while deleting Kafka topic {} on attempt {} of {}, retrying",
+                        topic,
+                        attempt,
+                        DELETE_TOPIC_MAX_ATTEMPTS,
+                        exception
+                );
+            } catch (Exception exception) {
+                if (attempt == DELETE_TOPIC_MAX_ATTEMPTS) {
+                    log.warn("Unexpected error while deleting Kafka topic {} after {} attempts", topic, attempt, exception);
+                    return;
+                }
+                log.warn(
+                        "Unexpected error while deleting Kafka topic {} on attempt {} of {}, retrying",
+                        topic,
+                        attempt,
+                        DELETE_TOPIC_MAX_ATTEMPTS,
+                        exception
+                );
+            }
         }
     }
 

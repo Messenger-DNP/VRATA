@@ -31,9 +31,14 @@ public class ChatRoomService {
         ChatRoom room = new ChatRoom(roomId, normalizedName, generateUniqueInviteCode());
 
         roomTopicManager.createRoomTopic(room.id());
-        chatRoomRepository.create(room);
-        chatRoomRepository.addMember(room.id(), userId);
-        return room;
+        try {
+            chatRoomRepository.create(room);
+            chatRoomRepository.addMember(room.id(), userId);
+            return room;
+        } catch (RuntimeException exception) {
+            roomTopicManager.deleteRoomTopic(room.id());
+            throw exception;
+        }
     }
 
     public ChatRoom joinRoom(Long userId, String inviteCode) {
@@ -46,6 +51,7 @@ public class ChatRoomService {
         }
 
         leaveRoom(userId);
+        roomTopicManager.createRoomTopic(room.id());
         chatRoomRepository.addMember(room.id(), userId);
         return room;
     }
