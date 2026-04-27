@@ -11,12 +11,15 @@ import java.util.concurrent.ThreadLocalRandom;
 public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final CryptoIdGenerator cryptoIdGenerator;
+    private final RoomTopicManager roomTopicManager;
     private static final int INVITE_CODE_LENGTH = 6;
 
     public ChatRoomService(ChatRoomRepository chatRoomRepository,
-                           CryptoIdGenerator cryptoIdGenerator) {
+                           CryptoIdGenerator cryptoIdGenerator,
+                           RoomTopicManager roomTopicManager) {
         this.chatRoomRepository = chatRoomRepository;
         this.cryptoIdGenerator = cryptoIdGenerator;
+        this.roomTopicManager = roomTopicManager;
     }
 
     public ChatRoom createRoom(Long userId, String roomName) {
@@ -59,6 +62,7 @@ public class ChatRoomService {
         boolean roomDeleted = false;
         if (!chatRoomRepository.hasMembers(roomId)) {
             chatRoomRepository.deleteRoom(roomId);
+            roomTopicManager.deleteRoomTopic(roomId);
             roomDeleted = true;
         }
 

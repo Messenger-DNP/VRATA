@@ -18,16 +18,18 @@ class ChatRoomServiceTest {
     private ChatRoomService chatRoomService;
     private InMemoryChatRoomRepository chatRoomRepository;
     private CryptoIdGenerator cryptoIdGenerator;
+    private RoomTopicManager roomTopicManager;
 
     @BeforeEach
     void setUp() {
         chatRoomRepository = new InMemoryChatRoomRepository();
         cryptoIdGenerator = Mockito.mock(CryptoIdGenerator.class);
+        roomTopicManager = Mockito.mock(RoomTopicManager.class);
 
         when(cryptoIdGenerator.nextPositiveLong())
                 .thenReturn(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L);
 
-        chatRoomService = new ChatRoomService(chatRoomRepository, cryptoIdGenerator);
+        chatRoomService = new ChatRoomService(chatRoomRepository, cryptoIdGenerator, roomTopicManager);
     }
 
     @Test
@@ -84,6 +86,7 @@ class ChatRoomServiceTest {
         assertEquals(room.id(), result.leftRoomId());
         assertTrue(result.roomDeleted());
         assertTrue(chatRoomRepository.findById(room.id()).isEmpty());
+        Mockito.verify(roomTopicManager).deleteRoomTopic(room.id());
     }
 
     @Test
@@ -97,6 +100,7 @@ class ChatRoomServiceTest {
         assertFalse(result.roomDeleted());
         assertTrue(chatRoomRepository.findById(room.id()).isPresent());
         assertTrue(chatRoomRepository.isUserInRoom(room.id(), 2L));
+        Mockito.verify(roomTopicManager, Mockito.never()).deleteRoomTopic(room.id());
     }
 
     @Test
