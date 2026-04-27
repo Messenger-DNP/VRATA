@@ -52,11 +52,13 @@ jobs:
         working-directory: frontend
         shell: bash
         run: |
-          BUILD_ARGS=(build web --release --base-href "$BASE_HREF")
-
-          if [ -n "${{ vars.VRATA_API_BASE_URL }}" ]; then
-            BUILD_ARGS+=(--dart-define "VRATA_API_BASE_URL=${{ vars.VRATA_API_BASE_URL }}")
+          API_BASE_URL="${{ vars.VRATA_API_BASE_URL }}"
+          if [ -z "$API_BASE_URL" ]; then
+            API_BASE_URL="https://vrata.onrender.com"
           fi
+
+          BUILD_ARGS=(build web --release --base-href "$BASE_HREF")
+          BUILD_ARGS+=(--dart-define "VRATA_API_BASE_URL=$API_BASE_URL")
 
           flutter "${BUILD_ARGS[@]}"
 
