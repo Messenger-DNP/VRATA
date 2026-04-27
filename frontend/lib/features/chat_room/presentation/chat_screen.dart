@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/app/router/app_router.dart';
 import 'package:frontend/features/auth/auth_session_provider.dart';
+import 'package:frontend/features/chat_lobby/chat_lobby_providers.dart';
+import 'package:frontend/features/chat_lobby/domain/entities/chat_lobby_failure.dart';
 import 'package:frontend/features/chat_lobby/domain/entities/chat_room.dart';
 import 'package:frontend/features/chat_room/domain/entities/chat_message.dart';
 import 'package:frontend/features/chat_room/presentation/controllers/chat_messages_controller.dart';
@@ -164,19 +166,75 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
 
     if (shouldLeave ?? false) {
-      _leaveRoom();
+      await _leaveRoom();
     }
   }
 
-  void _leaveRoom() {
+  Future<void> _leaveRoom() async {
     if (_isLeavingRoom) {
+      return;
+    }
+
+    final session = ref.read(authSessionProvider);
+    if (session == null) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Please log in again to leave the room.')),
+        );
       return;
     }
 
     setState(() {
       _isLeavingRoom = true;
     });
-    context.go(AppRoutes.lobby);
+
+    try {
+      await ref.read(leaveChatUseCaseProvider).call(userId: session.userId);
+
+      if (!mounted) {
+        return;
+      }
+
+      context.go(AppRoutes.lobby);
+    } on ChatLobbyFailureException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+
+      final message = switch (exception.failure) {
+        NetworkChatLobbyFailure(:final message) => message,
+        ValidationChatLobbyFailure(:final message) => message,
+        ServerChatLobbyFailure(:final message) => message,
+        UnknownChatLobbyFailure(:final message) => message,
+        _ => 'Could not leave room. Please try again.',
+      };
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Could not leave room. Please try again.'),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLeavingRoom = false;
+        });
+      }
+    }
   }
 
   bool _isNearBottom() {

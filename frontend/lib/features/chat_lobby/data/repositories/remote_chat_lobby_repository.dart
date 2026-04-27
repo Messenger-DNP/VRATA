@@ -1,6 +1,7 @@
 import 'package:frontend/features/chat_lobby/data/datasources/chat_lobby_remote_datasource.dart';
 import 'package:frontend/features/chat_lobby/data/dto/create_room_request_dto.dart';
 import 'package:frontend/features/chat_lobby/data/dto/join_room_request_dto.dart';
+import 'package:frontend/features/chat_lobby/data/dto/leave_room_request_dto.dart';
 import 'package:frontend/features/chat_lobby/data/mappers/chat_room_mapper.dart';
 import 'package:frontend/features/chat_lobby/domain/entities/chat_lobby_failure.dart';
 import 'package:frontend/features/chat_lobby/domain/entities/chat_room.dart';
@@ -38,6 +39,15 @@ class RemoteChatLobbyRepository implements ChatLobbyRepository {
       );
 
       return response.toDomain();
+    } on ChatLobbyRemoteException catch (exception) {
+      throw ChatLobbyFailureException(_mapFailure(exception));
+    }
+  }
+
+  @override
+  Future<void> leaveChat({required int userId}) async {
+    try {
+      await _datasource.leaveRoom(LeaveRoomRequestDto(userId: userId));
     } on ChatLobbyRemoteException catch (exception) {
       throw ChatLobbyFailureException(_mapFailure(exception));
     }

@@ -87,6 +87,32 @@ void main() {
       expect(room.inviteCode, 'abcdef');
     });
 
+    test('posts leave room request', () async {
+      late Uri capturedUri;
+      late String capturedBody;
+
+      final repository = _buildRepository(
+        MockClient((request) async {
+          capturedUri = request.url;
+          capturedBody = request.body;
+          return http.Response('', 200);
+        }),
+      );
+
+      await repository.leaveChat(userId: 42);
+
+      expect(
+        capturedUri.toString(),
+        'http://localhost:8080/api/v1/rooms/leave',
+      );
+      expect(
+        jsonDecode(capturedBody),
+        {
+          'userId': 42,
+        },
+      );
+    });
+
     test('maps room not found from backend', () async {
       final repository = _buildRepository(
         MockClient((request) async {
