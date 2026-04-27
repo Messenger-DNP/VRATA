@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - backend/feat/github-pages
   workflow_dispatch:
 
 permissions:
