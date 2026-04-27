@@ -40,14 +40,24 @@ public class KafkaConfig {
             @Value("${spring.kafka.properties.sasl.jaas.config:${spring.kafka.sasl.jaas.config:}}") String saslJaasConfig,
             @Value("${spring.kafka.properties.ssl.truststore.location:${spring.kafka.ssl.trust-store-location:}}") String trustStoreLocation,
             @Value("${spring.kafka.properties.ssl.truststore.password:${spring.kafka.ssl.trust-store-password:}}") String trustStorePassword,
-            @Value("${spring.kafka.properties.ssl.truststore.type:${spring.kafka.ssl.trust-store-type:}}") String trustStoreType
+            @Value("${spring.kafka.properties.ssl.truststore.type:${spring.kafka.ssl.trust-store-type:}}") String trustStoreType,
+            @Value("${spring.kafka.properties.ssl.truststore.certificates:}") String trustStoreCertificates
     ) {
         ObjectMapper objectMapper = kafkaObjectMapper();
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-        applySecurityConfig(config, securityProtocol, saslMechanism, saslJaasConfig, trustStoreLocation, trustStorePassword, trustStoreType);
+        applySecurityConfig(
+                config,
+                securityProtocol,
+                saslMechanism,
+                saslJaasConfig,
+                trustStoreLocation,
+                trustStorePassword,
+                trustStoreType,
+                trustStoreCertificates
+        );
         return new DefaultKafkaProducerFactory<>(
                 config,
                 new StringSerializer(),
@@ -70,7 +80,8 @@ public class KafkaConfig {
             @Value("${spring.kafka.properties.sasl.jaas.config:${spring.kafka.sasl.jaas.config:}}") String saslJaasConfig,
             @Value("${spring.kafka.properties.ssl.truststore.location:${spring.kafka.ssl.trust-store-location:}}") String trustStoreLocation,
             @Value("${spring.kafka.properties.ssl.truststore.password:${spring.kafka.ssl.trust-store-password:}}") String trustStorePassword,
-            @Value("${spring.kafka.properties.ssl.truststore.type:${spring.kafka.ssl.trust-store-type:}}") String trustStoreType
+            @Value("${spring.kafka.properties.ssl.truststore.type:${spring.kafka.ssl.trust-store-type:}}") String trustStoreType,
+            @Value("${spring.kafka.properties.ssl.truststore.certificates:}") String trustStoreCertificates
     ) {
         ObjectMapper objectMapper = kafkaObjectMapper();
         Map<String, Object> config = new HashMap<>();
@@ -81,7 +92,16 @@ public class KafkaConfig {
         config.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, metadataMaxAgeMs);
         config.put(JsonDeserializer.TRUSTED_PACKAGES, "ru.vrata.backend.infrastructure.kafka");
         config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, KafkaMessage.class);
-        applySecurityConfig(config, securityProtocol, saslMechanism, saslJaasConfig, trustStoreLocation, trustStorePassword, trustStoreType);
+        applySecurityConfig(
+                config,
+                securityProtocol,
+                saslMechanism,
+                saslJaasConfig,
+                trustStoreLocation,
+                trustStorePassword,
+                trustStoreType,
+                trustStoreCertificates
+        );
         return new DefaultKafkaConsumerFactory<>(
                 config,
                 new StringDeserializer(),
@@ -117,7 +137,8 @@ public class KafkaConfig {
             String saslJaasConfig,
             String trustStoreLocation,
             String trustStorePassword,
-            String trustStoreType
+            String trustStoreType,
+            String trustStoreCertificates
     ) {
         putIfPresent(config, CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol);
         putIfPresent(config, SaslConfigs.SASL_MECHANISM, saslMechanism);
@@ -125,6 +146,7 @@ public class KafkaConfig {
         putIfPresent(config, SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, trustStoreLocation);
         putIfPresent(config, SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, trustStorePassword);
         putIfPresent(config, SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, trustStoreType);
+        putIfPresent(config, SslConfigs.SSL_TRUSTSTORE_CERTIFICATES_CONFIG, trustStoreCertificates);
     }
 
     private void putIfPresent(Map<String, Object> config, String key, String value) {
