@@ -2,6 +2,9 @@
 
 Distributed room-based chat application built with Flutter, Spring Boot, Kafka, MongoDB, and WebSocket/STOMP.
 
+- Live Application: [messenger-dnp.github.io](https://messenger-dnp.github.io/)
+- Demo Video: [Mock Demo Link](https://example.com/vrata-demo)
+
 ## Project Proposal
 
 VRATA is a distributed messenger designed as a real-time network programming project. The main goal is to build a chat system where multiple users can create rooms, join by invite code, exchange messages in real time, and keep communication isolated between rooms.
