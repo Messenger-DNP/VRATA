@@ -6,8 +6,11 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.config.SaslConfigs;
+import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,13 +34,20 @@ import java.util.Map;
 public class KafkaConfig {
     @Bean
     public ProducerFactory<String, KafkaMessage> producerFactory(
-            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers
+            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
+            @Value("${spring.kafka.properties.security.protocol:${spring.kafka.security.protocol:}}") String securityProtocol,
+            @Value("${spring.kafka.properties.sasl.mechanism:${spring.kafka.sasl.mechanism:}}") String saslMechanism,
+            @Value("${spring.kafka.properties.sasl.jaas.config:${spring.kafka.sasl.jaas.config:}}") String saslJaasConfig,
+            @Value("${spring.kafka.properties.ssl.truststore.location:${spring.kafka.ssl.trust-store-location:}}") String trustStoreLocation,
+            @Value("${spring.kafka.properties.ssl.truststore.password:${spring.kafka.ssl.trust-store-password:}}") String trustStorePassword,
+            @Value("${spring.kafka.properties.ssl.truststore.type:${spring.kafka.ssl.trust-store-type:}}") String trustStoreType
     ) {
         ObjectMapper objectMapper = kafkaObjectMapper();
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        applySecurityConfig(config, securityProtocol, saslMechanism, saslJaasConfig, trustStoreLocation, trustStorePassword, trustStoreType);
         return new DefaultKafkaProducerFactory<>(
                 config,
                 new StringSerializer(),
@@ -54,7 +64,13 @@ public class KafkaConfig {
     public ConsumerFactory<String, KafkaMessage> consumerFactory(
             @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
             @Value("${spring.kafka.consumer.auto-offset-reset:earliest}") String autoOffsetReset,
-            @Value("${spring.kafka.consumer.properties.metadata.max.age.ms:5000}") Integer metadataMaxAgeMs
+            @Value("${spring.kafka.consumer.properties.metadata.max.age.ms:5000}") Integer metadataMaxAgeMs,
+            @Value("${spring.kafka.properties.security.protocol:${spring.kafka.security.protocol:}}") String securityProtocol,
+            @Value("${spring.kafka.properties.sasl.mechanism:${spring.kafka.sasl.mechanism:}}") String saslMechanism,
+            @Value("${spring.kafka.properties.sasl.jaas.config:${spring.kafka.sasl.jaas.config:}}") String saslJaasConfig,
+            @Value("${spring.kafka.properties.ssl.truststore.location:${spring.kafka.ssl.trust-store-location:}}") String trustStoreLocation,
+            @Value("${spring.kafka.properties.ssl.truststore.password:${spring.kafka.ssl.trust-store-password:}}") String trustStorePassword,
+            @Value("${spring.kafka.properties.ssl.truststore.type:${spring.kafka.ssl.trust-store-type:}}") String trustStoreType
     ) {
         ObjectMapper objectMapper = kafkaObjectMapper();
         Map<String, Object> config = new HashMap<>();
@@ -65,6 +81,7 @@ public class KafkaConfig {
         config.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, metadataMaxAgeMs);
         config.put(JsonDeserializer.TRUSTED_PACKAGES, "ru.vrata.backend.infrastructure.kafka");
         config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, KafkaMessage.class);
+        applySecurityConfig(config, securityProtocol, saslMechanism, saslJaasConfig, trustStoreLocation, trustStorePassword, trustStoreType);
         return new DefaultKafkaConsumerFactory<>(
                 config,
                 new StringDeserializer(),
@@ -91,6 +108,29 @@ public class KafkaConfig {
             }
         });
         return new ObjectMapper().registerModule(instantModule);
+    }
+
+    private void applySecurityConfig(
+            Map<String, Object> config,
+            String securityProtocol,
+            String saslMechanism,
+            String saslJaasConfig,
+            String trustStoreLocation,
+            String trustStorePassword,
+            String trustStoreType
+    ) {
+        putIfPresent(config, CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol);
+        putIfPresent(config, SaslConfigs.SASL_MECHANISM, saslMechanism);
+        putIfPresent(config, SaslConfigs.SASL_JAAS_CONFIG, saslJaasConfig);
+        putIfPresent(config, SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, trustStoreLocation);
+        putIfPresent(config, SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, trustStorePassword);
+        putIfPresent(config, SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, trustStoreType);
+    }
+
+    private void putIfPresent(Map<String, Object> config, String key, String value) {
+        if (value != null && !value.isBlank()) {
+            config.put(key, value);
+        }
     }
 
     @Bean
