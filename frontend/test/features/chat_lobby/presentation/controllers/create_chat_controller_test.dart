@@ -173,6 +173,7 @@ class FakeChatLobbyRepository implements ChatLobbyRepository {
   FakeChatLobbyRepository({
     this.onCreateChat,
     this.onJoinChat,
+    this.onLeaveChat,
   });
 
   final Future<ChatRoom> Function({
@@ -183,6 +184,9 @@ class FakeChatLobbyRepository implements ChatLobbyRepository {
     required int userId,
     required String inviteCode,
   })? onJoinChat;
+  final Future<void> Function({
+    required int userId,
+  })? onLeaveChat;
 
   @override
   Future<ChatRoom> createChat({
@@ -198,6 +202,11 @@ class FakeChatLobbyRepository implements ChatLobbyRepository {
     required String inviteCode,
   }) {
     return onJoinChat!(userId: userId, inviteCode: inviteCode);
+  }
+
+  @override
+  Future<void> leaveChat({required int userId}) {
+    return onLeaveChat?.call(userId: userId) ?? Future.value();
   }
 }
 

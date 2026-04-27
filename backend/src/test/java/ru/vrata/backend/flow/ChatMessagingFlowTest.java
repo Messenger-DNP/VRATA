@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import ru.vrata.backend.domain.service.KafkaMessageDeliveryService;
+import ru.vrata.backend.domain.service.RoomTopicManager;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 import ru.vrata.backend.infrastructure.kafka.producer.KafkaProducer;
 import ru.vrata.backend.infrastructure.mongo.service.MongoCounterService;
@@ -198,6 +199,20 @@ class ChatMessagingFlowTest {
                 @Override
                 public void produce(KafkaMessage message) {
                     outbox.add(message);
+                }
+            };
+        }
+
+        @Bean
+        @Primary
+        RoomTopicManager roomTopicManager() {
+            return new RoomTopicManager() {
+                @Override
+                public void createRoomTopic(Long roomId) {
+                }
+
+                @Override
+                public void deleteRoomTopic(Long roomId) {
                 }
             };
         }

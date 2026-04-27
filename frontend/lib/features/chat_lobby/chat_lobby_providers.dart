@@ -5,6 +5,7 @@ import 'package:frontend/features/chat_lobby/data/repositories/remote_chat_lobby
 import 'package:frontend/features/chat_lobby/domain/repositories/chat_lobby_repository.dart';
 import 'package:frontend/features/chat_lobby/domain/usecases/create_chat_use_case.dart';
 import 'package:frontend/features/chat_lobby/domain/usecases/join_chat_use_case.dart';
+import 'package:frontend/features/chat_lobby/domain/usecases/leave_chat_use_case.dart';
 import 'package:http/http.dart' as http;
 
 final chatLobbyApiBaseUrlProvider =
@@ -35,4 +36,8 @@ final createChatUseCaseProvider = Provider<CreateChatUseCase>(
 
 final joinChatUseCaseProvider = Provider<JoinChatUseCase>(
   (ref) => JoinChatUseCase(ref.watch(chatLobbyRepositoryProvider)),
+);
+
+final leaveChatUseCaseProvider = Provider<LeaveChatUseCase>(
+  (ref) => LeaveChatUseCase(ref.watch(chatLobbyRepositoryProvider)),
 );

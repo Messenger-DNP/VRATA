@@ -1,0 +1,81 @@
+name: Deploy frontend to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Compute build settings
+        shell: bash
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          OWNER_NAME="${GITHUB_REPOSITORY_OWNER}"
+
+          if [ "$REPO_NAME" = "${OWNER_NAME}.github.io" ]; then
+            echo "BASE_HREF=/" >> "$GITHUB_ENV"
+          else
+            echo "BASE_HREF=/$REPO_NAME/" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build Flutter web app
+        working-directory: frontend
+        shell: bash
+        run: |
+          API_BASE_URL="${{ vars.VRATA_API_BASE_URL }}"
+          if [ -z "$API_BASE_URL" ]; then
+            API_BASE_URL="https://vrata.onrender.com"
+          fi
+
+          BUILD_ARGS=(build web --release --base-href "$BASE_HREF")
+          BUILD_ARGS+=(--dart-define "VRATA_API_BASE_URL=$API_BASE_URL")
+
+          flutter "${BUILD_ARGS[@]}"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/build/web
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

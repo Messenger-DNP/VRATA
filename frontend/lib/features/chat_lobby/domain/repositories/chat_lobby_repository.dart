@@ -10,4 +10,8 @@ abstract interface class ChatLobbyRepository {
     required int userId,
     required String inviteCode,
   });
+
+  Future<void> leaveChat({
+    required int userId,
+  });
 }

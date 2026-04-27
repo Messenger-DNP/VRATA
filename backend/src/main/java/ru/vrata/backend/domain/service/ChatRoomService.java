@@ -11,24 +11,34 @@ import java.util.concurrent.ThreadLocalRandom;
 public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final CryptoIdGenerator cryptoIdGenerator;
+    private final RoomTopicManager roomTopicManager;
     private static final int INVITE_CODE_LENGTH = 6;
 
     public ChatRoomService(ChatRoomRepository chatRoomRepository,
-                           CryptoIdGenerator cryptoIdGenerator) {
+                           CryptoIdGenerator cryptoIdGenerator,
+                           RoomTopicManager roomTopicManager) {
         this.chatRoomRepository = chatRoomRepository;
         this.cryptoIdGenerator = cryptoIdGenerator;
+        this.roomTopicManager = roomTopicManager;
     }
 
     public ChatRoom createRoom(Long userId, String roomName) {
         validateUserId(userId);
+        leaveRoom(userId);
+
         Long roomId = generateUniqueRoomId();
         String normalizedName = normalizeOrGenerateRoomName(roomName, roomId);
         ChatRoom room = new ChatRoom(roomId, normalizedName, generateUniqueInviteCode());
 
-        chatRoomRepository.create(room);
-        leaveRoom(userId);
-        chatRoomRepository.addMember(room.id(), userId);
-        return room;
+        roomTopicManager.createRoomTopic(room.id());
+        try {
+            chatRoomRepository.create(room);
+            chatRoomRepository.addMember(room.id(), userId);
+            return room;
+        } catch (RuntimeException exception) {
+            roomTopicManager.deleteRoomTopic(room.id());
+            throw exception;
+        }
     }
 
     public ChatRoom joinRoom(Long userId, String inviteCode) {
@@ -41,6 +51,7 @@ public class ChatRoomService {
         }
 
         leaveRoom(userId);
+        roomTopicManager.createRoomTopic(room.id());
         chatRoomRepository.addMember(room.id(), userId);
         return room;
     }
@@ -48,21 +59,29 @@ public class ChatRoomService {
     public LeaveRoomResult leaveRoom(Long userId) {
         validateUserId(userId);
 
-        var currentRoom = chatRoomRepository.findByUserId(userId);
-        if (currentRoom.isEmpty()) {
-            return new LeaveRoomResult(null, false);
-        }
-
-        Long roomId = currentRoom.get().id();
-        chatRoomRepository.removeMember(roomId, userId);
-
+        Long leftRoomId = null;
         boolean roomDeleted = false;
-        if (!chatRoomRepository.hasMembers(roomId)) {
-            chatRoomRepository.deleteRoom(roomId);
-            roomDeleted = true;
+
+        while (true) {
+            var currentRoom = chatRoomRepository.findByUserId(userId);
+            if (currentRoom.isEmpty()) {
+                break;
+            }
+
+            Long roomId = currentRoom.get().id();
+            if (leftRoomId == null) {
+                leftRoomId = roomId;
+            }
+
+            chatRoomRepository.removeMember(roomId, userId);
+            if (!chatRoomRepository.hasMembers(roomId)) {
+                chatRoomRepository.deleteRoom(roomId);
+                roomTopicManager.deleteRoomTopic(roomId);
+                roomDeleted = true;
+            }
         }
 
-        return new LeaveRoomResult(roomId, roomDeleted);
+        return new LeaveRoomResult(leftRoomId, roomDeleted);
     }
 
     private long generateUniqueRoomId() {

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:frontend/features/chat_lobby/data/dto/create_room_request_dto.dart';
 import 'package:frontend/features/chat_lobby/data/dto/error_response_dto.dart';
 import 'package:frontend/features/chat_lobby/data/dto/join_room_request_dto.dart';
+import 'package:frontend/features/chat_lobby/data/dto/leave_room_request_dto.dart';
 import 'package:frontend/features/chat_lobby/data/dto/room_response_dto.dart';
 import 'package:http/http.dart' as http;
 
@@ -41,6 +42,10 @@ class ChatLobbyRemoteDatasource {
     return _post('/api/v1/rooms/join', request.toJson());
   }
 
+  Future<void> leaveRoom(LeaveRoomRequestDto request) {
+    return _postVoid('/api/v1/rooms/leave', request.toJson());
+  }
+
   Future<RoomResponseDto> _post(
     String path,
     Map<String, dynamic> body,
@@ -59,6 +64,45 @@ class ChatLobbyRemoteDatasource {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return RoomResponseDto.fromJson(_decodeJsonMap(response.body));
+      }
+
+      throw _mapErrorResponse(response);
+    } on TimeoutException {
+      throw const ChatLobbyRemoteException(
+        message: 'Request timed out. Please try again.',
+        isNetworkError: true,
+      );
+    } on http.ClientException {
+      throw const ChatLobbyRemoteException(
+        message:
+            'Could not connect to the server. Check that the backend is running.',
+        isNetworkError: true,
+      );
+    } on FormatException {
+      throw const ChatLobbyRemoteException(
+        message: 'Received an invalid response from the server.',
+      );
+    }
+  }
+
+  Future<void> _postVoid(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$_baseUrl$path'),
+            headers: const {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return;
       }
 
       throw _mapErrorResponse(response);
