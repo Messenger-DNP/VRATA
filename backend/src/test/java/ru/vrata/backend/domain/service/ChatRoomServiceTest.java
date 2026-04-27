@@ -37,6 +37,7 @@ class ChatRoomServiceTest {
         var room = chatRoomService.createRoom(10L, "Main room");
 
         assertTrue(chatRoomRepository.isUserInRoom(room.id(), 10L));
+        Mockito.verify(roomTopicManager).createRoomTopic(room.id());
     }
 
     @Test
