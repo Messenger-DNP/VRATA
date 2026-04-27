@@ -3,6 +3,7 @@ package ru.vrata.backend.domain.repository.inmemory;
 import org.springframework.stereotype.Repository;
 import ru.vrata.backend.domain.model.ChatRoom;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -12,6 +13,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
+@ConditionalOnProperty(name = "app.repository", havingValue = "inmemory")
 public class InMemoryChatRoomRepository implements ChatRoomRepository {
     private final Map<Long, ChatRoom> roomsById = new ConcurrentHashMap<>();
     private final Map<String, ChatRoom> roomsByInviteCode = new ConcurrentHashMap<>();

@@ -14,9 +14,11 @@ import org.springframework.web.context.WebApplicationContext;
 import ru.vrata.backend.domain.service.KafkaMessageDeliveryService;
 import ru.vrata.backend.infrastructure.kafka.KafkaMessage;
 import ru.vrata.backend.infrastructure.kafka.producer.KafkaProducer;
+import ru.vrata.backend.infrastructure.mongo.service.MongoCounterService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,7 +31,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
         "spring.docker.compose.enabled=false",
         "spring.kafka.listener.auto-startup=false",
-        "app.mongo.migrations.enabled=false"
+        "app.mongo.migrations.enabled=false",
+        "app.repository=inmemory"
 })
 class ChatMessagingFlowTest {
 
@@ -195,6 +198,19 @@ class ChatMessagingFlowTest {
                 @Override
                 public void produce(KafkaMessage message) {
                     outbox.add(message);
+                }
+            };
+        }
+
+        @Bean
+        @Primary
+        MongoCounterService mongoCounterService() {
+            AtomicLong userIdSequence = new AtomicLong(0L);
+
+            return new MongoCounterService(null) {
+                @Override
+                public long nextUserId() {
+                    return userIdSequence.incrementAndGet();
                 }
             };
         }

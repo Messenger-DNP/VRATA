@@ -6,21 +6,22 @@ import ru.vrata.backend.domain.model.ChatRoom;
 import ru.vrata.backend.domain.repository.ChatRoomRepository;
 
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
-    private final AtomicLong roomIdGenerator = new AtomicLong(1L);
+    private final CryptoIdGenerator cryptoIdGenerator;
     private static final int INVITE_CODE_LENGTH = 6;
 
-    public ChatRoomService(ChatRoomRepository chatRoomRepository) {
+    public ChatRoomService(ChatRoomRepository chatRoomRepository,
+                           CryptoIdGenerator cryptoIdGenerator) {
         this.chatRoomRepository = chatRoomRepository;
+        this.cryptoIdGenerator = cryptoIdGenerator;
     }
 
     public ChatRoom createRoom(Long userId, String roomName) {
         validateUserId(userId);
-        Long roomId = roomIdGenerator.getAndIncrement();
+        Long roomId = generateUniqueRoomId();
         String normalizedName = normalizeOrGenerateRoomName(roomName, roomId);
         ChatRoom room = new ChatRoom(roomId, normalizedName, generateUniqueInviteCode());
 
@@ -64,9 +65,16 @@ public class ChatRoomService {
         return new LeaveRoomResult(roomId, roomDeleted);
     }
 
+    private long generateUniqueRoomId() {
+        long id = cryptoIdGenerator.nextPositiveLong();
+        while (chatRoomRepository.findById(id).isPresent()) {
+            id = cryptoIdGenerator.nextPositiveLong();
+        }
+        return id;
+    }
+
     private String generateUniqueInviteCode() {
-        String code;
-        code = randomInviteCode();
+        String code = randomInviteCode();
 
         while (chatRoomRepository.findByInviteCode(code).isPresent()) {
             code = randomInviteCode();
