@@ -3,7 +3,7 @@
 Distributed room-based chat application built with Flutter, Spring Boot, Kafka, MongoDB, and WebSocket/STOMP.
 
 - Live Application: [messenger-dnp.github.io](https://messenger-dnp.github.io/)
-- Demo Video: [Mock Demo Link](https://example.com/vrata-demo)
+- Demo Video: [Google Drive](https://drive.google.com/drive/folders/1gL7EZCs8ooNubmVKkBrMVyvZSlgxeB8u?usp=sharing)
 
 ## Project Proposal
 
